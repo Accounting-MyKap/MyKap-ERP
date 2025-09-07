@@ -25,10 +25,10 @@ const DashboardPage: React.FC = () => {
             path: "/prospects",
         },
         {
-            title: "Credits",
+            title: "Loans",
             description: "View and manage finalized clients and their disbursed loans.",
             icon: CreditsIcon,
-            path: undefined,
+            path: "/loans",
         },
         {
             title: "Lenders",

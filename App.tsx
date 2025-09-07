@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ProspectsPage from './pages/prospects/ProspectsPage';
 import SettingsPage from './pages/SettingsPage';
+import LoansPage from './pages/loans/LoansPage';
 
 /**
  * A wrapper for routes that require authentication.
@@ -48,6 +49,7 @@ const AppRoutes: React.FC = () => {
             <Routes>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/prospects" element={<ProspectsPage />} />
+              <Route path="/loans" element={<LoansPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               {/* Add other protected routes here for Credits, Lenders, etc. */}
               

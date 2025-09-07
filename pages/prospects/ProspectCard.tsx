@@ -14,7 +14,7 @@ const statusStyles: { [key: string]: string } = {
 };
 
 const ProspectCard: React.FC<ProspectCardProps> = ({ prospect, onSelect, isSelected }) => {
-    const { client_name, prospect_code, current_stage_name, assigned_to_name, status, created_at } = prospect;
+    const { borrower_name, prospect_code, current_stage_name, assigned_to_name, status, created_at } = prospect;
 
     const formattedDate = new Date(created_at).toLocaleDateString('en-US', {
         day: '2-digit',
@@ -32,7 +32,7 @@ const ProspectCard: React.FC<ProspectCardProps> = ({ prospect, onSelect, isSelec
             }`}
         >
             <div className="flex justify-between items-start">
-                <h3 className="font-bold text-gray-900">{client_name}</h3>
+                <h3 className="font-bold text-gray-900">{borrower_name}</h3>
                 <span className="text-xs font-mono text-gray-500">{prospect_code}</span>
             </div>
             <p className="text-sm text-gray-600 mt-1">

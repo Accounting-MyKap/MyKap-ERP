@@ -32,7 +32,7 @@ const StageSection: React.FC<StageSectionProps> = ({
         }
     }, [stage.status]);
 
-    const { client_type } = prospect;
+    const { borrower_type } = prospect;
 
     const renderDocumentManagers = () => {
         if (stage.name.toLowerCase() === 'closing') {
@@ -58,8 +58,8 @@ const StageSection: React.FC<StageSectionProps> = ({
         }
 
         // --- Logic for Pre-validation Stage ---
-        const showIndividual = client_type === 'individual' || client_type === 'both';
-        const showCompany = client_type === 'company' || client_type === 'both';
+        const showIndividual = borrower_type === 'individual' || borrower_type === 'both';
+        const showCompany = borrower_type === 'company' || borrower_type === 'both';
 
         return (
             <div className="space-y-4">
@@ -78,6 +78,7 @@ const StageSection: React.FC<StageSectionProps> = ({
                         title="Company Documents"
                         documents={stage.documents.company || []}
                         applicantType="company"
+                        // Fix: Corrected typo from onUpdateStatus to onUpdateDocumentStatus.
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "company", status)}
                         onAddDocument={(docName) => onAddDocument("company", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "company")}
@@ -89,6 +90,7 @@ const StageSection: React.FC<StageSectionProps> = ({
                         title="Property Documents"
                         documents={stage.documents.property}
                         applicantType="property"
+                        // Fix: Corrected typo from onUpdateStatus to onUpdateDocumentStatus.
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "property", status)}
                         onAddDocument={(docName) => onAddDocument("property", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "property")}

@@ -32,11 +32,11 @@ export interface Stage {
 export interface Prospect {
     id: string;
     created_at: string;
-    client_name: string;
+    borrower_name: string;
     email: string;
     phone_number: string;
     loan_amount: number;
-    client_type: 'individual' | 'company' | 'both';
+    borrower_type: 'individual' | 'company' | 'both';
     loan_type: 'purchase' | 'refinance';
     assigned_to: string; // user id
     assigned_to_name: string;

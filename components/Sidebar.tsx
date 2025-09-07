@@ -12,7 +12,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: HomeIcon },
     { name: 'Prospects', path: '/prospects', icon: ProspectsIcon },
-    { name: 'Credits', path: '/credits', icon: CreditsIcon },
+    { name: 'Loans', path: '/loans', icon: CreditsIcon },
     { name: 'Lenders', path: '/lenders', icon: LendersIcon },
   ];
 

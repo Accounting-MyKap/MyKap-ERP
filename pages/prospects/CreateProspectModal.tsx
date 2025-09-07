@@ -11,38 +11,38 @@ interface CreateProspectModalProps {
 }
 
 const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClose, onAddProspect, users }) => {
-    const [clientName, setClientName] = useState('');
+    const [borrowerName, setBorrowerName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [loanAmount, setLoanAmount] = useState('');
-    const [clientType, setClientType] = useState<'individual' | 'company' | 'both'>('individual');
+    const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
     const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
     const [assignedTo, setAssignedTo] = useState('');
     const [error, setError] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!clientName || !assignedTo) {
-            setError('Client Name and Assigned To are required.');
+        if (!borrowerName || !assignedTo) {
+            setError('Borrower Name and Assigned To are required.');
             return;
         }
         
         onAddProspect({
-            client_name: clientName,
+            borrower_name: borrowerName,
             email,
             phone_number: phone,
             loan_amount: parseFloat(loanAmount) || 0,
-            client_type: clientType,
+            borrower_type: borrowerType,
             loan_type: loanType,
             assigned_to: assignedTo,
         });
 
         // Reset form and close
-        setClientName('');
+        setBorrowerName('');
         setEmail('');
         setPhone('');
         setLoanAmount('');
-        setClientType('individual');
+        setBorrowerType('individual');
         setLoanType('purchase');
         setAssignedTo('');
         setError('');
@@ -53,8 +53,8 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
         <Modal isOpen={isOpen} onClose={onClose} title="Create New Prospect">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label htmlFor="clientName" className="block text-sm font-medium text-gray-700">Client Name</label>
-                    <input type="text" id="clientName" value={clientName} onChange={e => setClientName(e.target.value)} className="input-field mt-1" placeholder="E.g., John Doe or Innovate Corp" required/>
+                    <label htmlFor="borrowerName" className="block text-sm font-medium text-gray-700">Borrower Name</label>
+                    <input type="text" id="borrowerName" value={borrowerName} onChange={e => setBorrowerName(e.target.value)} className="input-field mt-1" placeholder="E.g., John Doe or Innovate Corp" required/>
                 </div>
                  <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
@@ -69,13 +69,13 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                     <input type="number" id="loanAmount" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} className="input-field mt-1" placeholder="E.g., 250000" />
                 </div>
                 
-                {/* Client Type Radio */}
+                {/* Borrower Type Radio */}
                 <div>
-                    <span className="block text-sm font-medium text-gray-700">Client Type</span>
+                    <span className="block text-sm font-medium text-gray-700">Borrower Type</span>
                     <div className="mt-2 flex space-x-4">
-                        <label className="flex items-center"><input type="radio" name="clientType" value="individual" checked={clientType === 'individual'} onChange={() => setClientType('individual')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
-                        <label className="flex items-center"><input type="radio" name="clientType" value="company" checked={clientType === 'company'} onChange={() => setClientType('company')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
-                        <label className="flex items-center"><input type="radio" name="clientType" value="both" checked={clientType === 'both'} onChange={() => setClientType('both')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrowerType" value="individual" checked={borrowerType === 'individual'} onChange={() => setBorrowerType('individual')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrowerType" value="company" checked={borrowerType === 'company'} onChange={() => setBorrowerType('company')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrowerType" value="both" checked={borrowerType === 'both'} onChange={() => setBorrowerType('both')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
                     </div>
                 </div>
 

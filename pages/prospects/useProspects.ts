@@ -17,15 +17,15 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
     }
 
     const currentStage = prospect.stages[currentStageIndex];
-    const { client_type } = prospect;
+    const { borrower_type } = prospect;
 
     // 1. Gather all required documents for the current active stage.
     let allRequiredDocs: Document[] = [];
     if (currentStage.name.toLowerCase() === 'pre-validation') {
-         if (client_type === 'individual' || client_type === 'both') {
+         if (borrower_type === 'individual' || borrower_type === 'both') {
             allRequiredDocs = allRequiredDocs.concat(currentStage.documents.individual || []);
         }
-        if (client_type === 'company' || client_type === 'both') {
+        if (borrower_type === 'company' || borrower_type === 'both') {
             allRequiredDocs = allRequiredDocs.concat(currentStage.documents.company || []);
         }
         allRequiredDocs = allRequiredDocs.concat(currentStage.documents.property || []);
@@ -119,12 +119,12 @@ export const useProspects = () => {
                 }
             }
             
-            // Logic to regenerate Pre-validation documents if client or loan type changes
-            const clientTypeChanged = updatedData.client_type && updatedData.client_type !== originalProspect.client_type;
+            // Logic to regenerate Pre-validation documents if borrower or loan type changes
+            const borrowerTypeChanged = updatedData.borrower_type && updatedData.borrower_type !== originalProspect.borrower_type;
             const loanTypeChanged = updatedData.loan_type && updatedData.loan_type !== originalProspect.loan_type;
 
-            if (clientTypeChanged || loanTypeChanged) {
-                const newPreValidationDocs = getInitialDocuments(newProspect.client_type, newProspect.loan_type);
+            if (borrowerTypeChanged || loanTypeChanged) {
+                const newPreValidationDocs = getInitialDocuments(newProspect.borrower_type, newProspect.loan_type);
 
                 newProspect.stages = newProspect.stages.map(stage => {
                     if (stage.id === 1) { // Pre-validation is stage 1

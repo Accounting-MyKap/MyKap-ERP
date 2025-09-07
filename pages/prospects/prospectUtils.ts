@@ -2,10 +2,10 @@ import { Prospect, UserProfile, Stage } from './types';
 
 const STAGE_NAMES = ["Pre-validation", "KYC", "Title Work", "Underwriting (UW)", "Appraisal", "Closing"];
 
-export const getInitialDocuments = (client_type: Prospect['client_type'], loan_type: Prospect['loan_type']) => {
+export const getInitialDocuments = (borrower_type: Prospect['borrower_type'], loan_type: Prospect['loan_type']) => {
     const docs: Stage['documents'] = {};
 
-    if (client_type === 'individual' || client_type === 'both') {
+    if (borrower_type === 'individual' || borrower_type === 'both') {
         docs.individual = [
             { id: 'ind-doc-1', name: 'Valid ID (Passport Driver License)', status: 'missing', is_custom: false },
             { id: 'ind-doc-2', name: 'Bank Statements (3 months)', status: 'missing', is_custom: false },
@@ -16,7 +16,7 @@ export const getInitialDocuments = (client_type: Prospect['client_type'], loan_t
             { id: 'ind-doc-7', name: 'Customer Application', status: 'missing', is_custom: false },
         ];
     }
-    if (client_type === 'company' || client_type === 'both') {
+    if (borrower_type === 'company' || borrower_type === 'both') {
         docs.company = [
             { id: 'com-doc-1', name: 'Articles of Incorporation', status: 'missing', is_custom: false },
             { id: 'com-doc-2', name: 'Operating Agreement', status: 'missing', is_custom: false },
@@ -87,7 +87,7 @@ export const generateNewProspect = (
         let documents: Stage['documents'] = {};
 
         if (name === 'Pre-validation') {
-            documents = getInitialDocuments(prospectData.client_type, prospectData.loan_type);
+            documents = getInitialDocuments(prospectData.borrower_type, prospectData.loan_type);
         } else {
             documents = getStageSpecificDocs(name);
         }

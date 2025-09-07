@@ -38,7 +38,7 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = ({
         );
     }
     
-    const { client_name, client_type, loan_type, assigned_to_name, prospect_code, stages, status, rejected_at_stage, current_stage_name } = prospect;
+    const { borrower_name, borrower_type, loan_type, assigned_to_name, prospect_code, stages, status, rejected_at_stage, current_stage_name } = prospect;
     const currentStage = stages.find(s => s.status === 'in_progress') || stages[stages.length - 1];
 
     return (
@@ -46,7 +46,7 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = ({
             {/* Header */}
             <div className="pb-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-900">{client_name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">{borrower_name}</h2>
                     {status !== 'rejected' && (
                         <div className="flex space-x-2">
                              <button 
@@ -65,7 +65,7 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = ({
                     )}
                 </div>
                 <p className="text-sm text-gray-500 mt-1 capitalize">
-                    Type: {client_type} | Loan: {loan_type}
+                    Type: {borrower_type} | Loan: {loan_type}
                 </p>
                 <p className="text-sm text-gray-500">Assigned to: {assigned_to_name}</p>
                 <p className="text-sm font-mono text-gray-500 mt-1">Code: {prospect_code}</p>

@@ -12,11 +12,11 @@ interface EditProspectModalProps {
 
 const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, onUpdateProspect, prospect, users }) => {
     const [formData, setFormData] = useState({
-        client_name: '',
+        borrower_name: '',
         email: '',
         phone_number: '',
         loan_amount: '',
-        client_type: 'individual' as Prospect['client_type'],
+        borrower_type: 'individual' as Prospect['borrower_type'],
         loan_type: 'purchase' as Prospect['loan_type'],
         assigned_to: '',
     });
@@ -25,11 +25,11 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
     useEffect(() => {
         if (prospect) {
             setFormData({
-                client_name: prospect.client_name || '',
+                borrower_name: prospect.borrower_name || '',
                 email: prospect.email || '',
                 phone_number: prospect.phone_number || '',
                 loan_amount: prospect.loan_amount?.toString() || '',
-                client_type: prospect.client_type || 'individual',
+                borrower_type: prospect.borrower_type || 'individual',
                 loan_type: prospect.loan_type || 'purchase',
                 assigned_to: prospect.assigned_to || '',
             });
@@ -48,18 +48,18 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!prospect || !formData.client_name || !formData.assigned_to) {
-            setError('Client Name and Assigned To are required.');
+        if (!prospect || !formData.borrower_name || !formData.assigned_to) {
+            setError('Borrower Name and Assigned To are required.');
             return;
         }
         
         onUpdateProspect({
             id: prospect.id,
-            client_name: formData.client_name,
+            borrower_name: formData.borrower_name,
             email: formData.email,
             phone_number: formData.phone_number,
             loan_amount: parseFloat(formData.loan_amount) || 0,
-            client_type: formData.client_type,
+            borrower_type: formData.borrower_type,
             loan_type: formData.loan_type,
             assigned_to: formData.assigned_to,
         });
@@ -72,8 +72,8 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
         <Modal isOpen={isOpen} onClose={onClose} title="Edit Prospect">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label htmlFor="client_name" className="block text-sm font-medium text-gray-700">Client Name</label>
-                    <input type="text" name="client_name" id="client_name" value={formData.client_name} onChange={handleChange} className="input-field mt-1" required/>
+                    <label htmlFor="borrower_name" className="block text-sm font-medium text-gray-700">Borrower Name</label>
+                    <input type="text" name="borrower_name" id="borrower_name" value={formData.borrower_name} onChange={handleChange} className="input-field mt-1" required/>
                 </div>
                  <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
@@ -89,11 +89,11 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
                 </div>
                 
                 <div>
-                    <span className="block text-sm font-medium text-gray-700">Client Type</span>
+                    <span className="block text-sm font-medium text-gray-700">Borrower Type</span>
                     <div className="mt-2 flex space-x-4">
-                        <label className="flex items-center"><input type="radio" name="client_type" value="individual" checked={formData.client_type === 'individual'} onChange={handleRadioChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
-                        <label className="flex items-center"><input type="radio" name="client_type" value="company" checked={formData.client_type === 'company'} onChange={handleRadioChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
-                        <label className="flex items-center"><input type="radio" name="client_type" value="both" checked={formData.client_type === 'both'} onChange={handleRadioChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrower_type" value="individual" checked={formData.borrower_type === 'individual'} onChange={handleRadioChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrower_type" value="company" checked={formData.borrower_type === 'company'} onChange={handleRadioChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrower_type" value="both" checked={formData.borrower_type === 'both'} onChange={handleRadioChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
                     </div>
                 </div>
 

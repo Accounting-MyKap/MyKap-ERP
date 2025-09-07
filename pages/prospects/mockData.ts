@@ -7,11 +7,11 @@ export const MOCK_USERS: UserProfile[] = [
 ];
 
 const prospectBase1 = {
-    client_name: 'Yireth Fonseca Mercado',
+    borrower_name: 'Yireth Fonseca Mercado',
     email: 'yireth@example.com',
     phone_number: '305-111-2222',
     loan_amount: 350000,
-    client_type: 'individual' as const,
+    borrower_type: 'individual' as const,
     loan_type: 'purchase' as const,
     assigned_to: 'd141225c-4256-4d45-9169-bbe8b8c0f670',
 };
@@ -22,11 +22,11 @@ prospect1.created_at = new Date('2025-08-28T10:00:00Z').toISOString();
 prospect1.status = 'in_progress';
 
 const prospectBase2 = {
-    client_name: 'Jhon Escobar García',
+    borrower_name: 'Jhon Escobar García',
     email: 'jhon@example.com',
     phone_number: '305-333-4444',
     loan_amount: 750000,
-    client_type: 'company' as const,
+    borrower_type: 'company' as const,
     loan_type: 'refinance' as const,
     assigned_to: 'd141225c-4256-4d45-9169-bbe8b8c0f670',
 };
@@ -38,11 +38,11 @@ prospect2.status = 'completed';
 prospect2.stages = prospect2.stages.map(s => ({...s, status: 'completed' as const}));
 
 const prospectBase3 = {
-    client_name: 'Guillermo Andrés Carrasquilla Camargo',
+    borrower_name: 'Guillermo Andrés Carrasquilla Camargo',
     email: 'guillermo@example.com',
     phone_number: '305-555-6666',
     loan_amount: 1200000,
-    client_type: 'both' as const,
+    borrower_type: 'both' as const,
     loan_type: 'purchase' as const,
     assigned_to: 'd141225c-4256-4d45-9169-bbe8b8c0f670',
 };
@@ -55,11 +55,11 @@ prospect3.stages = prospect3.stages.map(s => ({...s, status: 'completed' as cons
 
 
 const prospectBase4 = {
-    client_name: 'Rejected Innovations LLC',
+    borrower_name: 'Rejected Innovations LLC',
     email: 'rejected@example.com',
     phone_number: '305-777-8888',
     loan_amount: 150000,
-    client_type: 'company' as const,
+    borrower_type: 'company' as const,
     loan_type: 'purchase' as const,
     assigned_to: 'a2b3c4d5-e6f7-g8h9-i0j1-k2l3m4n5o6p7',
 };
