@@ -82,6 +82,14 @@ const BorrowerSection: React.FC<BorrowerSectionProps> = ({ loan, onUpdate }) => 
                         </div>
                     </div>
                 </div>
+                 {/* Email Options */}
+                <div className="md:col-span-2 space-y-4">
+                    <h4 className="text-md font-semibold text-gray-700 border-b pb-2">Email Options</h4>
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" name="email" value={loan.email || ''} readOnly className="input-field mt-1 bg-gray-100" />
+                    </div>
+                </div>
             </div>
 
             <div className="pt-4 flex justify-end">

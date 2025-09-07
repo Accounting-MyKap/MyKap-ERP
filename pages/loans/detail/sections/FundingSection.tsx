@@ -1,5 +1,9 @@
-import React from 'react';
-import { Prospect } from '../../../prospects/types';
+import React, { useState } from 'react';
+import { Prospect, Funder } from '../../../prospects/types';
+import { useLenders } from '../../../lenders/useLenders';
+import AddLoanFunderModal from '../AddLoanFunderModal';
+import AddFundingEventModal from '../AddFundingEventModal';
+import { AddIcon, DollarCircleIcon, EditIcon, TrashIcon } from '../../../../components/icons';
 
 interface FundingSectionProps {
     loan: Prospect;
@@ -7,20 +11,86 @@ interface FundingSectionProps {
 }
 
 const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
-    // This is a placeholder for a more complex implementation
-    // that would involve adding, editing, and deleting funders.
+    const [isAddFunderModalOpen, setAddFunderModalOpen] = useState(false);
+    const [isFundingEventModalOpen, setFundingEventModalOpen] = useState(false);
+    const { lenders } = useLenders();
+    
     const funders = loan.funders || [];
+    const loanOriginatorId = 'lender-2'; // Assuming 'HKF' is the originator. This should be dynamic in a real app.
+
+
+    const handleAddFunder = (newFunder: Funder) => {
+        const updatedFunders = [...funders, newFunder];
+        onUpdate({ funders: updatedFunders });
+    };
+
+    const handleDeleteFunder = (funderId: string) => {
+        if (window.confirm("Are you sure you want to remove this funder? This cannot be undone.")) {
+            const updatedFunders = funders.filter(f => f.id !== funderId);
+            onUpdate({ funders: updatedFunders });
+        }
+    };
+    
+    const handleSaveFundingEvent = (data: { fundingDate: string; reference: string; fundingAmount: number; distributions: { [funderId: string]: number }; }) => {
+        let updatedFunders = [...funders];
+
+        // Create the history event
+        const newHistoryEvent = {
+            id: `hist-${crypto.randomUUID()}`,
+            date_created: new Date().toISOString().split('T')[0],
+            date_received: data.fundingDate,
+            type: 'Funding',
+            total_amount: data.fundingAmount,
+            notes: data.reference,
+        };
+
+        // Update principal balances based on distribution
+        updatedFunders = updatedFunders.map(funder => {
+            const distributionAmount = data.distributions[funder.id] || 0;
+            let newPrincipal = funder.principal_balance + distributionAmount;
+
+            // The originator's balance decreases as they "sell" participation
+            if (funder.lender_id === loanOriginatorId) {
+                 const totalSold = Object.entries(data.distributions)
+                    .filter(([id, _]) => updatedFunders.find(f => f.id === id)?.lender_id !== loanOriginatorId)
+                    .reduce((sum, [_, amount]) => sum + amount, 0);
+                newPrincipal -= totalSold;
+            }
+
+            return {
+                ...funder,
+                principal_balance: newPrincipal,
+            };
+        });
+
+        // Recalculate PCT owned based on new balances
+        const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
+        if (totalPrincipal > 0) {
+            updatedFunders = updatedFunders.map(funder => ({
+                ...funder,
+                pct_owned: funder.principal_balance / totalPrincipal
+            }));
+        }
+
+
+        onUpdate({
+            funders: updatedFunders,
+            history: [...(loan.history || []), newHistoryEvent]
+        });
+    };
+
 
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-    const formatPercent = (amount: number) => `${(amount * 100).toFixed(2)}%`;
+    const formatPercent = (amount: number) => `${(amount * 100).toFixed(3)}%`;
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-gray-800">Loan Funding</h3>
-                 <button className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 text-sm">
-                    Add Funder
-                </button>
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => setAddFunderModalOpen(true)} className="p-2 bg-gray-100 rounded-md hover:bg-gray-200" title="Add Funder"><AddIcon className="h-5 w-5 text-gray-600" /></button>
+                    <button onClick={() => setFundingEventModalOpen(true)} className="p-2 bg-gray-100 rounded-md hover:bg-gray-200" title="Record Funding Event"><DollarCircleIcon className="h-5 w-5 text-gray-600" /></button>
+                </div>
             </div>
 
             {funders.length > 0 ? (
@@ -31,7 +101,8 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lender Name</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PCT Owned</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lender Rate</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Original Amount</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Principal Balance</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -40,10 +111,22 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{funder.lender_name}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.pct_owned)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.lender_rate)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(funder.original_amount)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(funder.principal_balance)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        <button onClick={() => handleDeleteFunder(funder.id)} className="text-red-500 hover:text-red-700"><TrashIcon className="h-5 w-5" /></button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
+                         <tfoot className="bg-gray-50">
+                            <tr>
+                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">Total</td>
+                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatPercent(funders.reduce((acc, f) => acc + f.pct_owned, 0))}</td>
+                                <td></td>
+                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatCurrency(funders.reduce((acc, f) => acc + f.principal_balance, 0))}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             ) : (
@@ -51,6 +134,21 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                     No funding sources have been added for this loan.
                 </div>
             )}
+            
+            <AddLoanFunderModal 
+                isOpen={isAddFunderModalOpen}
+                onClose={() => setAddFunderModalOpen(false)}
+                onSave={handleAddFunder}
+                lenders={lenders}
+                existingFunderIds={funders.map(f => f.lender_id)}
+            />
+
+            <AddFundingEventModal
+                isOpen={isFundingEventModalOpen}
+                onClose={() => setFundingEventModalOpen(false)}
+                onSave={handleSaveFundingEvent}
+                loan={loan}
+            />
         </div>
     );
 };

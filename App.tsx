@@ -10,6 +10,7 @@ import ProspectsPage from './pages/prospects/ProspectsPage';
 import SettingsPage from './pages/SettingsPage';
 import LoansPage from './pages/loans/LoansPage';
 import LoanDetailPage from './pages/loans/LoanDetailPage';
+import LendersPage from './pages/lenders/LendersPage';
 
 /**
  * A wrapper for routes that require authentication.
@@ -52,6 +53,7 @@ const AppRoutes: React.FC = () => {
               <Route path="/prospects" element={<ProspectsPage />} />
               <Route path="/loans" element={<LoansPage />} />
               <Route path="/loans/:loanId" element={<LoanDetailPage />} />
+              <Route path="/lenders" element={<LendersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               {/* Add other protected routes here for Credits, Lenders, etc. */}
               

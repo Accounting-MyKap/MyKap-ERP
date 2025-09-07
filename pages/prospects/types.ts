@@ -40,6 +40,22 @@ export interface Address {
     zip?: string;
 }
 
+export interface CoBorrower {
+    id: string;
+    full_name: string;
+    salutation?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone_numbers?: {
+        home?: string;
+        work?: string;
+        mobile?: string;
+    };
+    mailing_address?: Address;
+    relation_type?: string;
+}
+
 export interface BorrowerDetails {
     salutation?: string;
     first_name?: string;
@@ -68,8 +84,18 @@ export interface LoanTerms {
     regular_payment?: number;
 }
 
-export interface Funder {
+export interface Lender {
     id: string;
+    account: string;
+    lender_name: string;
+    portfolio_value: number;
+    trust_balance: number;
+    address: Address;
+}
+
+export interface Funder {
+    id: string; // This is the ID of the participation record
+    lender_id: string; // This links to the global Lender
     lender_account: string;
     lender_name: string;
     pct_owned: number;
@@ -119,6 +145,7 @@ export interface Prospect {
 
     // Detailed loan information
     borrower_details?: BorrowerDetails;
+    co_borrowers?: CoBorrower[];
     terms?: LoanTerms;
     funders?: Funder[];
     properties?: Property[];

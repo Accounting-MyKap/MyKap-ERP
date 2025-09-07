@@ -55,7 +55,7 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                  <div className="space-y-4">
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-2">Important Dates</h4>
                     <div>
-                        <label htmlFor="closing_date" className="block text-sm font-medium text-gray-700">Closing</label>
+                        <label htmlFor="closing_date" className="block text-sm font-medium text-gray-700">Closing Date</label>
                         <input type="date" id="closing_date" name="closing_date" value={terms.closing_date || ''} onChange={handleChange} className="input-field mt-1" />
                     </div>
                      <div>

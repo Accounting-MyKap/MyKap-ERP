@@ -78,7 +78,6 @@ const StageSection: React.FC<StageSectionProps> = ({
                         title="Company Documents"
                         documents={stage.documents.company || []}
                         applicantType="company"
-                        // Fix: Corrected typo from onUpdateStatus to onUpdateDocumentStatus.
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "company", status)}
                         onAddDocument={(docName) => onAddDocument("company", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "company")}
@@ -90,7 +89,6 @@ const StageSection: React.FC<StageSectionProps> = ({
                         title="Property Documents"
                         documents={stage.documents.property}
                         applicantType="property"
-                        // Fix: Corrected typo from onUpdateStatus to onUpdateDocumentStatus.
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "property", status)}
                         onAddDocument={(docName) => onAddDocument("property", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "property")}

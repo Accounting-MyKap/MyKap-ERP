@@ -1,21 +1,21 @@
 import React from 'react';
-import { BorrowerIcon, TermsIcon, FundingIcon, PropertiesIcon, HistoryIcon, ChevronRightIcon } from '../../../components/icons';
+import { BorrowerIcon, TermsIcon, FundingIcon, PropertiesIcon, HistoryIcon, UsersIcon } from '../../../components/icons';
 
 export type Section = 'borrower' | 'terms' | 'funding' | 'properties' | 'history';
+export type SubSection = 'co-borrowers';
 
 interface LoanDetailSidebarProps {
     activeSection: Section;
-    setActiveSection: (section: Section) => void;
+    activeSubSection: SubSection | null;
+    onSelect: (section: Section, subSection?: SubSection | null) => void;
 }
 
 const NavItem: React.FC<{
     icon: React.ElementType;
     label: string;
-    section: Section;
     isActive: boolean;
     onClick: () => void;
-    hasSubsections?: boolean;
-}> = ({ icon: Icon, label, section, isActive, onClick, hasSubsections }) => {
+}> = ({ icon: Icon, label, isActive, onClick }) => {
     return (
         <button
             onClick={onClick}
@@ -25,24 +25,31 @@ const NavItem: React.FC<{
         >
             <Icon className="h-5 w-5 mr-3" />
             <span>{label}</span>
-            {hasSubsections && <ChevronRightIcon className="h-4 w-4 ml-auto text-gray-400" />}
         </button>
     );
 };
 
-const SubNavItem: React.FC<{ label: string; }> = ({ label }) => {
+const SubNavItem: React.FC<{ 
+    label: string;
+    isActive: boolean;
+    onClick: () => void;
+}> = ({ label, isActive, onClick }) => {
     return (
          <button
-            className={`w-full flex items-center p-3 rounded-lg text-left transition-colors duration-200 text-gray-500 hover:bg-gray-100 pl-11`}
+            onClick={onClick}
+            className={`w-full flex items-center p-3 rounded-lg text-left transition-colors duration-200 text-gray-500 hover:bg-gray-100 pl-11 ${
+                isActive ? 'bg-blue-50 text-blue-600 font-medium' : ''
+            }`}
         >
             <span>{label}</span>
         </button>
     )
 }
 
-const LoanDetailSidebar: React.FC<LoanDetailSidebarProps> = ({ activeSection, setActiveSection }) => {
-    const navItems: { name: Section, label: string, icon: React.ElementType, subsections?: { label: string }[] }[] = [
-        { name: 'borrower', label: 'Borrower', icon: BorrowerIcon, subsections: [{ label: 'Co-Borrowers'}] },
+const LoanDetailSidebar: React.FC<LoanDetailSidebarProps> = ({ activeSection, activeSubSection, onSelect }) => {
+    
+    const navItems: { name: Section, label: string, icon: React.ElementType, subsections?: { name: SubSection, label: string }[] }[] = [
+        { name: 'borrower', label: 'Borrower', icon: BorrowerIcon, subsections: [{ name: 'co-borrowers', label: 'Co-Borrowers' }] },
         { name: 'terms', label: 'Terms', icon: TermsIcon },
         { name: 'funding', label: 'Funding', icon: FundingIcon },
         { name: 'properties', label: 'Properties', icon: PropertiesIcon },
@@ -55,16 +62,21 @@ const LoanDetailSidebar: React.FC<LoanDetailSidebarProps> = ({ activeSection, se
                 {navItems.map(item => (
                     <div key={item.name}>
                         <NavItem
-                            section={item.name}
                             label={item.label}
                             icon={item.icon}
-                            isActive={activeSection === item.name}
-                            onClick={() => setActiveSection(item.name)}
-                            hasSubsections={!!item.subsections}
+                            isActive={activeSection === item.name && !activeSubSection}
+                            onClick={() => onSelect(item.name)}
                         />
                         {activeSection === item.name && item.subsections && (
                             <div className="mt-1 space-y-1">
-                                {item.subsections.map(sub => <SubNavItem key={sub.label} label={sub.label} />)}
+                                {item.subsections.map(sub => 
+                                    <SubNavItem 
+                                        key={sub.name} 
+                                        label={sub.label}
+                                        isActive={activeSubSection === sub.name}
+                                        onClick={() => onSelect(item.name, sub.name)}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>

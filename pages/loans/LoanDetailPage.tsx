@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useProspects } from '../prospects/useProspects';
 import { Prospect } from '../prospects/types';
-import LoanDetailSidebar, { Section } from './detail/LoanDetailSidebar';
+import LoanDetailSidebar, { Section, SubSection } from './detail/LoanDetailSidebar';
 import LoanDetailHeader from './detail/LoanDetailHeader';
 import BorrowerSection from './detail/sections/BorrowerSection';
 import TermsSection from './detail/sections/TermsSection';
 import FundingSection from './detail/sections/FundingSection';
 import PropertiesSection from './detail/sections/PropertiesSection';
 import HistorySection from './detail/sections/HistorySection';
+import CoBorrowersSection from './detail/sections/CoBorrowersSection';
 
 const LoanDetailPage: React.FC = () => {
     const { loanId } = useParams<{ loanId: string }>();
@@ -17,6 +18,7 @@ const LoanDetailPage: React.FC = () => {
     const { prospects, loading, updateLoan } = useProspects();
     const [loan, setLoan] = useState<Prospect | null>(null);
     const [activeSection, setActiveSection] = useState<Section>('borrower');
+    const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
 
     useEffect(() => {
         if (!loading) {
@@ -38,6 +40,10 @@ const LoanDetailPage: React.FC = () => {
         }
     };
 
+    const handleSelect = (section: Section, subSection?: SubSection | null) => {
+        setActiveSection(section);
+        setActiveSubSection(subSection || null);
+    };
 
     if (loading || !loan) {
         return (
@@ -52,6 +58,9 @@ const LoanDetailPage: React.FC = () => {
     const renderSection = () => {
         switch (activeSection) {
             case 'borrower':
+                if (activeSubSection === 'co-borrowers') {
+                    return <CoBorrowersSection loan={loan} onUpdate={handleUpdateLoan} />;
+                }
                 return <BorrowerSection loan={loan} onUpdate={handleUpdateLoan} />;
             case 'terms':
                 return <TermsSection loan={loan} onUpdate={handleUpdateLoan} />;
@@ -72,7 +81,11 @@ const LoanDetailPage: React.FC = () => {
                 <LoanDetailHeader loan={loan} />
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="md:col-span-1">
-                        <LoanDetailSidebar activeSection={activeSection} setActiveSection={setActiveSection} />
+                        <LoanDetailSidebar 
+                            activeSection={activeSection} 
+                            activeSubSection={activeSubSection}
+                            onSelect={handleSelect} 
+                        />
                     </div>
                     <div className="md:col-span-3">
                         <div className="bg-white rounded-lg shadow-md p-6 min-h-[400px]">
