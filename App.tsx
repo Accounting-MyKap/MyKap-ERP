@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -9,6 +10,7 @@ import LoansPage from './pages/loans/LoansPage';
 import LoanDetailPage from './pages/loans/LoanDetailPage';
 import LendersPage from './pages/lenders/LendersPage';
 import SettingsPage from './pages/SettingsPage';
+import LenderDetailPage from './pages/lenders/detail/LenderDetailPage';
 
 // A custom component to protect routes that require authentication.
 const ProtectedRoute: React.FC = () => {
@@ -44,6 +46,8 @@ const App: React.FC = () => {
             <Route path="/loans" element={<LoansPage />} />
             <Route path="/loans/:loanId" element={<LoanDetailPage />} />
             <Route path="/lenders" element={<LendersPage />} />
+            <Route path="/lenders/new" element={<LenderDetailPage />} />
+            <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {/* Redirect root to dashboard if logged in */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
