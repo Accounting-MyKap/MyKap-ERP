@@ -141,6 +141,14 @@ export const useProspects = () => {
         // In real app: This would be a complex transaction in Supabase, likely a stored procedure.
     };
 
+    const updateLoan = (loanId: string, updatedData: Partial<Prospect>) => {
+        setProspects(prev => prev.map(p => 
+            p.id === loanId ? { ...p, ...updatedData } : p
+        ));
+        // In a real app:
+        // const { data, error } = await supabase.from('prospects').update(updatedData).eq('id', loanId);
+    };
+
     const updateDocumentStatus = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, newStatus: DocumentStatus) => {
         setProspects(prev => prev.map(p => {
             if (p.id !== prospectId) return p;
@@ -254,5 +262,5 @@ export const useProspects = () => {
         ));
     };
 
-    return { prospects, users, loading, addProspect, updateProspect, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, reopenProspect, rejectProspect };
+    return { prospects, users, loading, addProspect, updateProspect, updateLoan, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, reopenProspect, rejectProspect };
 };

@@ -1,28 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Header from '../../components/Header';
 import { useProspects } from '../prospects/useProspects';
 import { Prospect } from '../prospects/types';
 import LoansTable from './LoansTable';
-import EditProspectModal from '../prospects/EditProspectModal';
 
 const LoansPage: React.FC = () => {
-    const { prospects, users, loading, updateProspect } = useProspects();
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedLoan, setSelectedLoan] = useState<Prospect | null>(null);
+    const { prospects, loading } = useProspects();
+    const navigate = useNavigate();
 
     const loans = useMemo(() => {
         return prospects.filter(p => p.status === 'completed');
     }, [prospects]);
 
     const handleEditLoan = (loan: Prospect) => {
-        setSelectedLoan(loan);
-        setIsEditModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsEditModalOpen(false);
-        setSelectedLoan(null);
+        navigate(`/loans/${loan.id}`);
     };
 
     return (
@@ -35,13 +28,6 @@ const LoansPage: React.FC = () => {
                     onEditLoan={handleEditLoan}
                 />
             </div>
-            <EditProspectModal
-                isOpen={isEditModalOpen}
-                onClose={handleCloseModal}
-                prospect={selectedLoan}
-                users={users}
-                onUpdateProspect={updateProspect}
-            />
         </DashboardLayout>
     );
 };
