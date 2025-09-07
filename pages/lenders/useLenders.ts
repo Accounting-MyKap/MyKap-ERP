@@ -14,8 +14,23 @@ export const useLenders = () => {
         }, 500);
     }, []);
 
-    // In a real app, you would have functions here to add, update, and delete lenders
-    // that make API calls to your backend (e.g., Supabase).
+    const addLender = (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance'>) => {
+        const newLender: Lender = {
+            id: `lender-${crypto.randomUUID()}`,
+            ...lenderData,
+            portfolio_value: 0,
+            trust_balance: 0,
+        };
+        setLenders(prev => [newLender, ...prev]);
+    };
 
-    return { lenders, loading };
+    const updateLender = (lenderId: string, updatedData: Partial<Omit<Lender, 'id'>>) => {
+        setLenders(prev =>
+            prev.map(lender =>
+                lender.id === lenderId ? { ...lender, ...updatedData } : lender
+            )
+        );
+    };
+
+    return { lenders, loading, addLender, updateLender };
 };

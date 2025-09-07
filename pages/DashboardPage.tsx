@@ -34,7 +34,7 @@ const DashboardPage: React.FC = () => {
             title: "Lenders",
             description: "Manage and track third-party funding sources.",
             icon: LendersIcon,
-            path: undefined,
+            path: "/lenders",
         },
     ];
 
