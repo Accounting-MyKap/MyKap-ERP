@@ -66,7 +66,10 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                 </div>
                 <div>
                     <label htmlFor="loanAmount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
-                    <input type="number" id="loanAmount" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} className="input-field mt-1" placeholder="E.g., 250000" />
+                    <div className="input-container mt-1">
+                        <span className="input-adornment">$</span>
+                        <input type="number" id="loanAmount" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} className="input-field input-field-with-adornment-left" placeholder="E.g., 250000" />
+                    </div>
                 </div>
                 
                 {/* Borrower Type Radio */}

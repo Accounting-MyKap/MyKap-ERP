@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lender, TrustAccountEvent } from '../../../prospects/types';
 import AddDepositModal from '../AddDepositModal';
 import { AddIcon } from '../../../../components/icons';
+import { formatCurrency } from '../../../../utils/formatters';
 
 interface TrustAccountSectionProps {
     lender: Lender;
@@ -30,11 +31,6 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender, onUpd
         });
         
         onUpdate(lender.id, { trust_account_history: updatedHistory, trust_balance: currentBalance });
-    };
-
-    const formatCurrency = (amount: number) => {
-        const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-        return amount < 0 ? <span className="text-red-600">{formatted}</span> : <span>{formatted}</span>;
     };
     
     const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -65,8 +61,12 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender, onUpd
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(event.date)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm capitalize text-gray-600">{event.type}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{event.description}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right">{formatCurrency(event.amount)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right">{formatCurrency(event.balance)}</td>
+                                    <td className={`px-4 py-4 whitespace-nowrap text-sm text-right ${event.type !== 'deposit' ? 'text-red-600' : ''}`}>
+                                        {formatCurrency(event.amount)}
+                                    </td>
+                                    <td className={`px-4 py-4 whitespace-nowrap text-sm text-right ${event.balance < 0 ? 'text-red-600' : ''}`}>
+                                        {formatCurrency(event.balance)}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Prospect } from '../../../prospects/types';
+import { formatCurrency } from '../../../../utils/formatters';
 
 interface HistorySectionProps {
     loan: Prospect;
@@ -9,7 +10,6 @@ const HistorySection: React.FC<HistorySectionProps> = ({ loan }) => {
     const history = loan.history || [];
 
     const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
     return (
         <div className="space-y-6">

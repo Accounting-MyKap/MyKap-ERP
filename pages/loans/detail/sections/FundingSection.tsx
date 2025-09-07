@@ -4,6 +4,7 @@ import { useLenders } from '../../../lenders/useLenders';
 import AddLoanFunderModal from '../AddLoanFunderModal';
 import AddFundingEventModal from '../AddFundingEventModal';
 import { AddIcon, DollarCircleIcon, EditIcon, TrashIcon } from '../../../../components/icons';
+import { formatCurrency, formatPercent } from '../../../../utils/formatters';
 
 interface FundingSectionProps {
     loan: Prospect;
@@ -79,10 +80,6 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
         });
     };
 
-
-    const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-    const formatPercent = (amount: number) => `${(amount * 100).toFixed(3)}%`;
-
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -109,8 +106,8 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                             {funders.map((funder) => (
                                 <tr key={funder.id}>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{funder.lender_name}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.pct_owned)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.lender_rate)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.pct_owned, 3)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.lender_rate, 3)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(funder.principal_balance)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                                         <button onClick={() => handleDeleteFunder(funder.id)} className="text-red-500 hover:text-red-700"><TrashIcon className="h-5 w-5" /></button>
@@ -121,7 +118,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                          <tfoot className="bg-gray-50">
                             <tr>
                                 <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">Total</td>
-                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatPercent(funders.reduce((acc, f) => acc + f.pct_owned, 0))}</td>
+                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatPercent(funders.reduce((acc, f) => acc + f.pct_owned, 0), 3)}</td>
                                 <td></td>
                                 <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatCurrency(funders.reduce((acc, f) => acc + f.principal_balance, 0))}</td>
                                 <td></td>

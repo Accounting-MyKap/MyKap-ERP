@@ -6,4 +6,19 @@
     .input-field {
         @apply appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 bg-white placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
     }
+    .input-container {
+        @apply relative;
+    }
+    .input-adornment {
+        @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 sm:text-sm;
+    }
+    .input-adornment-right {
+        @apply absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 sm:text-sm;
+    }
+    .input-field-with-adornment-left {
+        @apply pl-7;
+    }
+    .input-field-with-adornment-right {
+        @apply pr-10;
+    }
 }

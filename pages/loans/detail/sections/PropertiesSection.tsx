@@ -1,5 +1,6 @@
 import React from 'react';
 import { Prospect } from '../../../prospects/types';
+import { formatCurrency } from '../../../../utils/formatters';
 
 interface PropertiesSectionProps {
     loan: Prospect;
@@ -8,8 +9,6 @@ interface PropertiesSectionProps {
 
 const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate }) => {
     const properties = loan.properties || [];
-
-    const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
     
     return (
         <div className="space-y-6">

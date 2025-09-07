@@ -85,7 +85,10 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
                 </div>
                 <div>
                     <label htmlFor="loan_amount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
-                    <input type="number" name="loan_amount" id="loan_amount" value={formData.loan_amount} onChange={handleChange} className="input-field mt-1" />
+                    <div className="input-container mt-1">
+                        <span className="input-adornment">$</span>
+                        <input type="number" name="loan_amount" id="loan_amount" value={formData.loan_amount} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                    </div>
                 </div>
                 
                 <div>

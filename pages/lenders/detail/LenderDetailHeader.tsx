@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Lender } from '../../prospects/types';
+import { formatCurrency } from '../../../utils/formatters';
 
 interface LenderDetailHeaderProps {
     lender: Lender;
@@ -14,11 +15,6 @@ const InfoCard: React.FC<{ title: string; value: string | number | undefined }> 
 );
 
 const LenderDetailHeader: React.FC<LenderDetailHeaderProps> = ({ lender }) => {
-    
-    const formatCurrency = (amount?: number) => {
-        if (amount === undefined) return 'N/A';
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-    }
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-md">

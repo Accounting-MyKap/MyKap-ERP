@@ -7,10 +7,18 @@ interface TermsSectionProps {
 }
 
 const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
-    const [terms, setTerms] = useState<LoanTerms>(loan.terms || {});
+    const [terms, setTerms] = useState<Partial<LoanTerms>>({});
 
      useEffect(() => {
-        setTerms(loan.terms || {});
+        if (loan.terms) {
+            setTerms({
+                ...loan.terms,
+                // Convert decimal to percentage for display in input
+                note_rate: (loan.terms.note_rate || 0) * 100,
+            });
+        } else {
+            setTerms({})
+        }
     }, [loan]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,7 +28,12 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
     };
 
     const handleSave = () => {
-        onUpdate({ terms });
+        const termsToSave: Partial<LoanTerms> = {
+            ...terms,
+            // Convert percentage from input back to decimal for saving
+            note_rate: (terms.note_rate || 0) / 100,
+        };
+        onUpdate({ terms: termsToSave as LoanTerms });
     };
 
     return (
@@ -32,11 +45,17 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-2">General</h4>
                     <div>
                         <label htmlFor="original_amount" className="block text-sm font-medium text-gray-700">Original Amount</label>
-                        <input type="number" id="original_amount" name="original_amount" value={terms.original_amount || ''} onChange={handleChange} className="input-field mt-1" />
+                        <div className="input-container mt-1">
+                            <span className="input-adornment">$</span>
+                            <input type="number" id="original_amount" name="original_amount" value={terms.original_amount || ''} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                        </div>
                     </div>
                     <div>
-                        <label htmlFor="note_rate" className="block text-sm font-medium text-gray-700">Note Rate (%)</label>
-                        <input type="number" id="note_rate" name="note_rate" value={terms.note_rate || ''} onChange={handleChange} className="input-field mt-1" />
+                        <label htmlFor="note_rate" className="block text-sm font-medium text-gray-700">Note Rate</label>
+                         <div className="input-container mt-1">
+                            <input type="number" id="note_rate" name="note_rate" value={terms.note_rate || ''} onChange={handleChange} className="input-field input-field-with-adornment-right" />
+                            <span className="input-adornment-right">%</span>
+                        </div>
                     </div>
                 </div>
                 {/* Loan Balances */}
@@ -44,11 +63,17 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-2">Loan Balances</h4>
                     <div>
                         <label htmlFor="principal_balance" className="block text-sm font-medium text-gray-700">Principal Balance</label>
-                        <input type="number" id="principal_balance" name="principal_balance" value={terms.principal_balance || ''} onChange={handleChange} className="input-field mt-1" />
+                        <div className="input-container mt-1">
+                            <span className="input-adornment">$</span>
+                            <input type="number" id="principal_balance" name="principal_balance" value={terms.principal_balance || ''} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                        </div>
                     </div>
                      <div>
                         <label htmlFor="trust_balance" className="block text-sm font-medium text-gray-700">Trust Balance</label>
-                        <input type="number" id="trust_balance" name="trust_balance" value={terms.trust_balance || ''} onChange={handleChange} className="input-field mt-1" />
+                        <div className="input-container mt-1">
+                            <span className="input-adornment">$</span>
+                            <input type="number" id="trust_balance" name="trust_balance" value={terms.trust_balance || ''} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                        </div>
                     </div>
                 </div>
                 {/* Important Dates */}

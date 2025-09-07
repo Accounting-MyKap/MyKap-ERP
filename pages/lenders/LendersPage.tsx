@@ -6,15 +6,12 @@ import { useLenders } from './useLenders';
 import { Lender } from '../prospects/types';
 import LendersHeader from './LendersHeader';
 import AddLenderModal from './AddLenderModal';
+import { formatCurrency } from '../../utils/formatters';
 
 const LendersPage: React.FC = () => {
     const { lenders, loading, addLender, updateLender } = useLenders();
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-    };
 
     const handleRowClick = (lenderId: string) => {
         navigate(`/lenders/${lenderId}`);

@@ -43,7 +43,7 @@ prospect2.borrower_details = {
 };
 prospect2.terms = {
     original_amount: 750000,
-    note_rate: 9.0,
+    note_rate: 0.09,
     principal_balance: 750000,
     trust_balance: 0,
     closing_date: '2022-07-26',
@@ -87,7 +87,7 @@ prospect3.prospect_code = 'HKF-ML0001';
 prospect3.created_at = new Date('2025-08-22T12:00:00Z').toISOString();
 prospect3.status = 'completed';
 prospect3.stages = prospect3.stages.map(s => ({...s, status: 'completed' as const}));
-prospect3.terms = { original_amount: 1200000, note_rate: 8.5, principal_balance: 1150000, maturity_date: '2045-09-01', closing_date: '2025-08-30' };
+prospect3.terms = { original_amount: 1200000, note_rate: 0.085, principal_balance: 1150000, maturity_date: '2045-09-01', closing_date: '2025-08-30' };
 
 
 const prospectBase4 = {

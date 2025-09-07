@@ -1,6 +1,7 @@
 import React from 'react';
 import { Prospect } from '../prospects/types';
 import { EditIcon } from '../../components/icons';
+import { formatCurrency } from '../../utils/formatters';
 
 interface LoansTableProps {
     loans: Prospect[];
@@ -20,10 +21,6 @@ const LoansTable: React.FC<LoansTableProps> = ({ loans, loading, onEditLoan }) =
             </div>
         );
     }
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {

@@ -50,11 +50,17 @@ const AddLoanFunderModal: React.FC<AddLoanFunderModalProps> = ({ isOpen, onClose
                 </div>
                 <div>
                     <label htmlFor="originalAmount" className="block text-sm font-medium text-gray-700">Original Amount</label>
-                    <input type="number" id="originalAmount" value={originalAmount} onChange={e => setOriginalAmount(parseFloat(e.target.value) || 0)} className="input-field mt-1" />
+                    <div className="input-container mt-1">
+                        <span className="input-adornment">$</span>
+                        <input type="number" id="originalAmount" value={originalAmount} onChange={e => setOriginalAmount(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-left" />
+                    </div>
                 </div>
                 <div>
-                    <label htmlFor="lenderRate" className="block text-sm font-medium text-gray-700">Lender Rate (%)</label>
-                    <input type="number" step="0.01" id="lenderRate" value={lenderRate} onChange={e => setLenderRate(parseFloat(e.target.value) || 0)} className="input-field mt-1" />
+                    <label htmlFor="lenderRate" className="block text-sm font-medium text-gray-700">Lender Rate</label>
+                    <div className="input-container mt-1">
+                        <input type="number" step="0.01" id="lenderRate" value={lenderRate} onChange={e => setLenderRate(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-right" />
+                        <span className="input-adornment-right">%</span>
+                    </div>
                 </div>
 
                 <div className="pt-4 flex justify-end space-x-3">

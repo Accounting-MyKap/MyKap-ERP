@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Prospect } from '../../prospects/types';
+import { formatCurrency, formatPercent } from '../../../utils/formatters';
 
 interface LoanDetailHeaderProps {
     loan: Prospect;
@@ -20,11 +21,6 @@ const LoanDetailHeader: React.FC<LoanDetailHeaderProps> = ({ loan }) => {
         return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
 
-    const formatCurrency = (amount?: number) => {
-        if (amount === undefined) return 'N/A';
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-    }
-
     return (
         <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-start">
@@ -39,7 +35,7 @@ const LoanDetailHeader: React.FC<LoanDetailHeaderProps> = ({ loan }) => {
                 <InfoCard title="Principal Balance" value={formatCurrency(loan.terms?.principal_balance)} />
                 <InfoCard title="Maturity Date" value={formatDate(loan.terms?.maturity_date)} />
                 <InfoCard title="Loan Type" value={loan.loan_type} />
-                <InfoCard title="Note Rate" value={`${loan.terms?.note_rate || 0}%`} />
+                <InfoCard title="Note Rate" value={formatPercent(loan.terms?.note_rate)} />
             </div>
         </div>
     );

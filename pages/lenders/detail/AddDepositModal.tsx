@@ -10,7 +10,7 @@ interface AddDepositModalProps {
 
 const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSave }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [type, setType] = useState<'deposit' | 'withdrawal'>('deposit');
+    const [type, setType] = useState<'deposit' | 'withdrawal' | 'distribution'>('deposit');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
 
@@ -42,6 +42,7 @@ const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSa
                     <select id="type" value={type} onChange={e => setType(e.target.value as any)} className="input-field mt-1" required>
                         <option value="deposit">Deposit</option>
                         <option value="withdrawal">Withdrawal</option>
+                        <option value="distribution">Distribution</option>
                     </select>
                 </div>
                 <div>
@@ -50,7 +51,10 @@ const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSa
                 </div>
                 <div>
                     <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Amount</label>
-                    <input type="number" id="amount" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} className="input-field mt-1" required />
+                    <div className="input-container mt-1">
+                        <span className="input-adornment">$</span>
+                        <input type="number" id="amount" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-left" required />
+                    </div>
                 </div>
 
                 <div className="pt-4 flex justify-end space-x-3">

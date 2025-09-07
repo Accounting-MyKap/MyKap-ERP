@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Prospect, Funder } from '../../prospects/types';
+import { formatCurrency } from '../../../utils/formatters';
 
 interface FundingEventData {
     fundingDate: string;
@@ -68,7 +69,10 @@ const AddFundingEventModal: React.FC<AddFundingEventModalProps> = ({ isOpen, onC
             </div>
             <div>
                 <label htmlFor="fundingAmount" className="block text-sm font-medium text-gray-700">Funding Amount</label>
-                <input type="number" id="fundingAmount" value={fundingAmount} onChange={e => setFundingAmount(parseFloat(e.target.value) || 0)} className="input-field mt-1" />
+                <div className="input-container mt-1">
+                    <span className="input-adornment">$</span>
+                    <input type="number" id="fundingAmount" value={fundingAmount} onChange={e => setFundingAmount(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-left" />
+                </div>
             </div>
             <div className="pt-4 flex justify-end space-x-3">
                 <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-md hover:bg-gray-300">Cancel</button>
@@ -84,26 +88,29 @@ const AddFundingEventModal: React.FC<AddFundingEventModalProps> = ({ isOpen, onC
                 {funders.map(funder => (
                     <div key={funder.id} className="grid grid-cols-2 gap-4 items-center">
                         <label htmlFor={`dist-${funder.id}`} className="text-sm font-medium text-gray-800">{funder.lender_name}</label>
-                        <input
-                            type="number"
-                            id={`dist-${funder.id}`}
-                            value={distributions[funder.id] || ''}
-                            onChange={e => handleDistributionChange(funder.id, parseFloat(e.target.value) || 0)}
-                            className="input-field text-right"
-                            placeholder="0.00"
-                        />
+                        <div className="input-container">
+                            <span className="input-adornment">$</span>
+                            <input
+                                type="number"
+                                id={`dist-${funder.id}`}
+                                value={distributions[funder.id] || ''}
+                                onChange={e => handleDistributionChange(funder.id, parseFloat(e.target.value) || 0)}
+                                className="input-field input-field-with-adornment-left text-right"
+                                placeholder="0.00"
+                            />
+                        </div>
                     </div>
                 ))}
             </div>
             <div className="pt-2 border-t text-right">
-                <p className="text-sm">Total Distributed: <span className="font-semibold">{totalDistributed.toFixed(2)}</span></p>
-                <p className={`text-sm ${remainingAmount !== 0 ? 'text-red-600' : 'text-green-600'}`}>Remaining: <span className="font-semibold">{remainingAmount.toFixed(2)}</span></p>
+                <p className="text-sm">Total Distributed: <span className="font-semibold">{formatCurrency(totalDistributed)}</span></p>
+                <p className={`text-sm ${remainingAmount !== 0 ? 'text-red-600' : 'text-green-600'}`}>Remaining: <span className="font-semibold">{formatCurrency(remainingAmount)}</span></p>
             </div>
             <div className="pt-4 flex justify-between space-x-3">
                 <button type="button" onClick={() => setStep(1)} className="bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-md hover:bg-gray-300">Back</button>
                 <div>
                     <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-md hover:bg-gray-300 mr-2">Cancel</button>
-                    <button type="button" onClick={handleSave} disabled={remainingAmount !== 0} className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300">Apply</button>
+                    <button type="button" onClick={handleSave} disabled={Math.abs(remainingAmount) > 0.01} className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300">Apply</button>
                 </div>
             </div>
         </div>
