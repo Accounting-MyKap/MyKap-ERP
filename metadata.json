@@ -1,0 +1,5 @@
+{
+  "name": "MyKap ERP",
+  "description": "A modern ERP application for managing prospects, credits, and lenders, built with React and Supabase.",
+  "requestFramePermissions": []
+}
