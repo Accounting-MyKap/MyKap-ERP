@@ -1,7 +1,8 @@
+// pages/prospects/types.ts
+
 export type DocumentStatus = 'missing' | 'ready_for_review' | 'approved' | 'rejected';
-
+export type StageStatus = 'completed' | 'in_progress' | 'locked';
 export type ApplicantType = 'individual' | 'company' | 'property' | 'general';
-
 export type ClosingDocStatusKey = 'sent' | 'signed' | 'filled';
 
 export interface Document {
@@ -10,10 +11,9 @@ export interface Document {
     status: DocumentStatus;
     is_custom: boolean;
     is_optional?: boolean;
-    // Closing doc specific properties
+    // For closing docs
     sent?: boolean;
     signed?: boolean;
-
     filled?: boolean;
     category?: 'disclosures' | 'loan_docs';
 }
@@ -21,7 +21,7 @@ export interface Document {
 export interface Stage {
     id: number;
     name: string;
-    status: 'completed' | 'in_progress' | 'locked';
+    status: StageStatus;
     documents: {
         individual?: Document[];
         company?: Document[];
@@ -30,78 +30,53 @@ export interface Stage {
     };
 }
 
+export interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
 
-// --- New Detailed Types for Loans ---
-
+// Sub-types for loan details
 export interface Address {
     street?: string;
     city?: string;
     state?: string;
     zip?: string;
 }
-
-export interface CoBorrower {
-    id: string;
-    full_name: string;
-    salutation?: string;
-    first_name?: string;
-    last_name?: string;
-    email?: string;
-    phone_numbers?: {
-        home?: string;
-        work?: string;
-        mobile?: string;
-    };
-    mailing_address?: Address;
-    relation_type?: string;
-}
-
 export interface BorrowerDetails {
     salutation?: string;
-    first_name?: string;
-    middle_initial?: string;
-    last_name?: string;
     work_phone?: string;
     mobile_phone?: string;
     mailing_address?: Address;
-    legal_structure?: string;
-    dob?: string;
-    tin?: string;
-    ein?: string;
 }
 
 export interface LoanTerms {
     original_amount?: number;
     note_rate?: number;
-    sold_rate?: number;
     principal_balance?: number;
     trust_balance?: number;
-    unpaid_late_charges?: number;
-    payment_frequency?: 'monthly' | 'quarterly' | 'yearly';
-    closing_date?: string;
-    first_payment_date?: string;
-    maturity_date?: string;
-    regular_payment?: number;
-}
-
-export interface Lender {
-    id: string;
-    account: string;
-    lender_name: string;
-    portfolio_value: number;
-    trust_balance: number;
-    address: Address;
+    closing_date?: string; // YYYY-MM-DD
+    maturity_date?: string; // YYYY-MM-DD
 }
 
 export interface Funder {
-    id: string; // This is the ID of the participation record
-    lender_id: string; // This links to the global Lender
+    id: string;
+    lender_id: string;
     lender_account: string;
     lender_name: string;
     pct_owned: number;
     lender_rate: number;
-    principal_balance: number;
     original_amount: number;
+    principal_balance: number;
+}
+
+export interface HistoryEvent {
+    id: string;
+    date_created: string; // YYYY-MM-DD
+    date_received: string; // YYYY-MM-DD
+    type: string;
+    total_amount: number;
+    notes?: string;
 }
 
 export interface Property {
@@ -112,48 +87,68 @@ export interface Property {
     property_type: string;
     occupancy: string;
     appraisal_value: number;
-    appraisal_date: string;
+    appraisal_date: string; // YYYY-MM-DD
 }
 
-export interface HistoryEvent {
+export interface CoBorrower {
     id: string;
-    date_created: string;
-    date_received: string;
-    type: string; // e.g., 'Funding'
-    total_amount: number;
-    notes?: string;
+    full_name: string;
+    first_name?: string;
+    last_name?: string;
+    salutation?: string;
+    phone_numbers?: {
+        home?: string;
+        work?: string;
+        mobile?: string;
+    };
+    mailing_address?: Address;
+    email?: string;
+    relation_type?: string;
+}
+
+export interface Lender {
+    id: string;
+    account: string;
+    lender_name: string;
+    address?: Address;
+    portfolio_value: number;
+    trust_balance: number;
+    trust_account_history?: TrustAccountEvent[];
+}
+
+export interface TrustAccountEvent {
+    id: string;
+    date: string; // YYYY-MM-DD
+    type: 'deposit' | 'withdrawal' | 'distribution';
+    description: string;
+    amount: number;
+    balance: number;
 }
 
 
 export interface Prospect {
     id: string;
+    prospect_code: string;
     created_at: string;
+    status: 'in_progress' | 'completed' | 'rejected';
+    current_stage: number;
+    current_stage_name: string;
+    assigned_to: string; // user id
+    assigned_to_name: string;
     borrower_name: string;
     email: string;
     phone_number: string;
     loan_amount: number;
     borrower_type: 'individual' | 'company' | 'both';
     loan_type: 'purchase' | 'refinance';
-    assigned_to: string; // user id
-    assigned_to_name: string;
-    status: 'in_progress' | 'completed' | 'rejected';
-    current_stage: number;
-    current_stage_name: string;
-    prospect_code: string;
     stages: Stage[];
     rejected_at_stage?: number | null;
-
-    // Detailed loan information
+    
+    // Fields for completed loans
     borrower_details?: BorrowerDetails;
-    co_borrowers?: CoBorrower[];
     terms?: LoanTerms;
     funders?: Funder[];
-    properties?: Property[];
     history?: HistoryEvent[];
-}
-
-export interface UserProfile {
-    id: string;
-    first_name: string;
-    last_name: string;
+    properties?: Property[];
+    co_borrowers?: CoBorrower[];
 }

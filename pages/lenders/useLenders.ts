@@ -7,29 +7,24 @@ export const useLenders = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Simulate fetching data
         setTimeout(() => {
             setLenders(MOCK_LENDERS);
             setLoading(false);
-        }, 500);
+        }, 500); // Simulate network delay
     }, []);
 
     const addLender = (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance'>) => {
         const newLender: Lender = {
-            id: `lender-${crypto.randomUUID()}`,
-            ...lenderData,
+            id: `lender-${Date.now()}`,
             portfolio_value: 0,
             trust_balance: 0,
+            ...lenderData,
         };
         setLenders(prev => [newLender, ...prev]);
     };
 
-    const updateLender = (lenderId: string, updatedData: Partial<Omit<Lender, 'id'>>) => {
-        setLenders(prev =>
-            prev.map(lender =>
-                lender.id === lenderId ? { ...lender, ...updatedData } : lender
-            )
-        );
+    const updateLender = (lenderId: string, updatedData: Partial<Lender>) => {
+        setLenders(prev => prev.map(l => l.id === lenderId ? { ...l, ...updatedData } : l));
     };
 
     return { lenders, loading, addLender, updateLender };
