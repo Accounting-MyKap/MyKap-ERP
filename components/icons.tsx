@@ -6,21 +6,30 @@ const Icon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-export const MyKapLogo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg viewBox="0 0 128 40" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <text x="10" y="30" fontFamily="Arial, sans-serif" fontSize="30" fontWeight="bold" fill="currentColor">
-      MyKap
-    </text>
-  </svg>
+/**
+ * MyKap Logo Component (Full)
+ * Please replace the placeholder `src` with your actual logo URL from Google Cloud.
+ */
+export const MyKapLogo: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (props) => (
+    <img 
+        src="https://storage.googleapis.com/assets_co-investment_simulator/logo.png" // TODO: Replace with your actual logo URL
+        alt="MyKap Logo" 
+        {...props} 
+    />
 );
 
-export const MyKapIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <text x="2" y="30" fontFamily="Arial, sans-serif" fontSize="30" fontWeight="bold" fill="currentColor">
-      MK
-    </text>
-  </svg>
+/**
+ * MyKap Icon Component (Square)
+ * Please replace the placeholder `src` with your actual icon URL from Google Cloud.
+ */
+export const MyKapIcon: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (props) => (
+  <img 
+    src="https://storage.googleapis.com/assets_co-investment_simulator/favicon.png" // TODO: Replace with your actual icon URL
+    alt="MyKap Icon" 
+    {...props} 
+  />
 );
+
 
 export const HomeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a.75.75 0 011.06 0l8.955 8.955M3 10.5v.75A4.5 4.5 0 007.5 15h9a4.5 4.5 0 004.5-4.5v-.75m-15 6v-1.5a.75.75 0 01.75-.75h13.5a.75.75 0 01.75.75v1.5m-15 3v-1.5a.75.75 0 01.75-.75h13.5a.75.75 0 01.75.75v1.5M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></Icon>

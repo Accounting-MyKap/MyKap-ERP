@@ -20,27 +20,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
 
   return (
     <div className={`bg-white flex flex-col p-4 border-r border-gray-200 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      {/* Header Section */}
       <div className="mb-6">
         {isCollapsed ? (
-          <div className="flex flex-col items-center gap-4">
-            <MyKapIcon className="h-8 w-auto" />
+          // Collapsed View
+          <div className="flex flex-col items-center space-y-4">
+            <Link to="/dashboard">
+              <MyKapIcon className="h-8 w-auto text-blue-600" />
+            </Link>
             <button 
               onClick={onToggle} 
-              className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"
-              aria-label="Toggle Sidebar"
+              className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"
+              aria-label="Expand sidebar"
             >
               <MenuIcon className="h-6 w-6" />
             </button>
           </div>
         ) : (
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-2 rounded-lg ml-10">
-                <MyKapLogo className="h-14 w-auto" />
-            </div>
+          // Expanded View
+          <div className="flex items-center justify-between">
+             <Link to="/dashboard">
+              <MyKapLogo className="h-8 w-auto" />
+            </Link>
             <button 
               onClick={onToggle} 
-              className="text-gray-500 hover:bg-gray-100 p-2 rounded-full ml-auto"
-              aria-label="Toggle Sidebar"
+              className="text-gray-500 hover:bg-gray-100 p-2 rounded-lg"
+              aria-label="Collapse sidebar"
             >
               <MenuIcon className="h-6 w-6" />
             </button>
