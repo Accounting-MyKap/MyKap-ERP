@@ -12,7 +12,7 @@ const Icon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
  */
 export const MyKapLogo: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (props) => (
     <img 
-        src="https://storage.googleapis.com/assets_co-investment_simulator/logo.png" // TODO: Replace with your actual logo URL
+        src="https://storage.googleapis.com/assets_co-investment_simulator/logo.png" 
         alt="MyKap Logo" 
         {...props} 
     />
@@ -24,7 +24,7 @@ export const MyKapLogo: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (p
  */
 export const MyKapIcon: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (props) => (
   <img 
-    src="https://storage.googleapis.com/assets_co-investment_simulator/favicon.png" // TODO: Replace with your actual icon URL
+    src="https://storage.googleapis.com/assets_co-investment_simulator/favicon.png" 
     alt="MyKap Icon" 
     {...props} 
   />
@@ -109,4 +109,12 @@ export const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 export const DollarCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></Icon>
+);
+
+export const PaymentIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V6.375c0-.621.504-1.125 1.125-1.125h.375M12 12.75a.75.75 0 100-1.5.75.75 0 000 1.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" fill="currentColor" /><path strokeLinecap="round" strokeLinejoin="round" d="M9.042 16.034a.75.75 0 011.06-1.06l1.89-1.89a.75.75 0 111.06 1.06l-1.89 1.89a.75.75 0 01-1.06 0zM12.42 11.23a.75.75 0 010-1.06l.75-.75a.75.75 0 011.06 0l.75.75a.75.75 0 010 1.06l-.75.75a.75.75 0 01-1.06 0l-.75-.75z" /></Icon>
+);
+
+export const WithdrawalIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75m-18 0a48.008 48.008 0 015.162-1.853A48.008 48.008 0 0112 15c2.11 0 4.198.25 6.188.735a48.008 48.008 0 015.162 1.853m-18 0v-9a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121.75 9.75v9m-18 0h18M12 12.75h.008v.008H12v-.008z" /></Icon>
 );

@@ -3,15 +3,16 @@ import { Prospect, Funder } from '../../../prospects/types';
 import { useLenders } from '../../../lenders/useLenders';
 import AddLoanFunderModal from '../AddLoanFunderModal';
 import AddFundingEventModal from '../AddFundingEventModal';
-import { AddIcon, DollarCircleIcon, EditIcon, TrashIcon } from '../../../../components/icons';
+import { AddIcon, DollarCircleIcon, EditIcon, TrashIcon, PaymentIcon } from '../../../../components/icons';
 import { formatCurrency, formatPercent } from '../../../../utils/formatters';
 
 interface FundingSectionProps {
     loan: Prospect;
     onUpdate: (updatedData: Partial<Prospect>) => void;
+    onRecordPaymentClick: () => void;
 }
 
-const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
+const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecordPaymentClick }) => {
     const [isAddFunderModalOpen, setAddFunderModalOpen] = useState(false);
     const [isFundingEventModalOpen, setFundingEventModalOpen] = useState(false);
     const { lenders } = useLenders();
@@ -87,6 +88,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                 <div className="flex items-center space-x-2">
                     <button onClick={() => setAddFunderModalOpen(true)} className="p-2 bg-gray-100 rounded-md hover:bg-gray-200" title="Add Funder"><AddIcon className="h-5 w-5 text-gray-600" /></button>
                     <button onClick={() => setFundingEventModalOpen(true)} className="p-2 bg-gray-100 rounded-md hover:bg-gray-200" title="Record Funding Event"><DollarCircleIcon className="h-5 w-5 text-gray-600" /></button>
+                    <button onClick={onRecordPaymentClick} className="p-2 bg-gray-100 rounded-md hover:bg-gray-200" title="Record Payment"><PaymentIcon className="h-5 w-5 text-gray-600" /></button>
                 </div>
             </div>
 
@@ -146,6 +148,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate }) => {
                 onSave={handleSaveFundingEvent}
                 loan={loan}
             />
+
         </div>
     );
 };

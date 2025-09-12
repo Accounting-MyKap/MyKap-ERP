@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Prospect, UserProfile, DocumentStatus, ApplicantType, Stage, Document, ClosingDocStatusKey } from './types';
+import { Prospect, UserProfile, DocumentStatus, ApplicantType, Stage, Document, ClosingDocStatusKey, Funder, HistoryEvent } from './types';
 import { MOCK_PROSPECTS, MOCK_USERS } from './mockData';
 import { generateNewProspect, getInitialDocuments } from './prospectUtils';
 
@@ -34,7 +34,10 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
     }
 
     if (allRequiredDocs.length === 0) {
-        return prospect; // Stage has no documents to check.
+        // Even if there are no docs, we might need to advance, but for now we require docs.
+        // In a real scenario, a stage might complete on a manual action.
+        // For now, let's assume auto-advance only happens if there are docs and they are approved.
+        return prospect;
     }
 
     // 2. Check if every non-optional document is approved.
@@ -53,12 +56,44 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
     const isLastStage = currentStageIndex === newStages.length - 1;
 
     if (isLastStage) {
-        // Prospect is fully completed.
+        // Prospect is fully completed. This is where it becomes a "Loan".
+        // Auto-assign 100% funding to the originator (HKF).
+        const loanAmount = prospect.loan_amount || 0;
+        const closingDate = new Date().toISOString().split('T')[0];
+        
+        const originatorFunder: Funder = {
+            id: `funder-${crypto.randomUUID()}`,
+            lender_id: 'lender-2', // Hardcoded ID for 'Home Kapital Finance LLC'
+            lender_account: 'HKF',
+            lender_name: 'Home Kapital Finance LLC DBA MYKAP',
+            pct_owned: 1,
+            lender_rate: 0.09, // Example rate, should be dynamic
+            original_amount: loanAmount,
+            principal_balance: loanAmount
+        };
+
+        const initialHistoryEvent = {
+            id: `hist-${crypto.randomUUID()}`,
+            date_created: closingDate,
+            date_received: closingDate,
+            type: 'Funding',
+            total_amount: loanAmount,
+            notes: 'Initial loan funding by originator.'
+        };
+
         return {
             ...prospect,
             stages: newStages,
             status: 'completed',
             current_stage_name: 'Closing',
+            terms: { // Initialize terms
+                ...prospect.terms,
+                original_amount: loanAmount,
+                principal_balance: loanAmount,
+                closing_date: closingDate,
+            },
+            funders: [originatorFunder],
+            history: [initialHistoryEvent],
         };
     } else {
         // Advance to the next stage.
@@ -262,5 +297,50 @@ export const useProspects = () => {
         ));
     };
 
-    return { prospects, users, loading, addProspect, updateProspect, updateLoan, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, reopenProspect, rejectProspect };
+    const recordLoanPayment = (loanId: string, payment: { date: string; amount: number; notes?: string; distributions: { funderId: string; amount: number }[] }) => {
+        setProspects(prev => prev.map(p => {
+            if (p.id !== loanId) return p;
+    
+            // 1. Update loan's principal balance
+            const newPrincipalBalance = (p.terms?.principal_balance || 0) - payment.amount;
+    
+            // 2. Create new history event for the payment
+            const newHistoryEvent: HistoryEvent = {
+                id: `hist-${crypto.randomUUID()}`,
+                date_created: new Date().toISOString().split('T')[0],
+                date_received: payment.date,
+                type: 'Payment',
+                total_amount: payment.amount,
+                notes: payment.notes,
+            };
+    
+            // 3. Update each funder's principal balance based on the specific distributions
+            const updatedFunders = (p.funders || []).map(funder => {
+                const distribution = payment.distributions.find(d => d.funderId === funder.id);
+                const funderReduction = distribution ? distribution.amount : 0;
+                return {
+                    ...funder,
+                    principal_balance: funder.principal_balance - funderReduction,
+                };
+            });
+    
+            // 4. Recalculate ownership percentage based on the new principal balances
+            const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
+            const finalFunders = totalPrincipal > 0 
+                ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))
+                : updatedFunders.map(f => ({ ...f, pct_owned: 0 })); // Handle case where loan is paid off
+
+            return {
+                ...p,
+                terms: {
+                    ...p.terms,
+                    principal_balance: newPrincipalBalance,
+                },
+                funders: finalFunders,
+                history: [...(p.history || []), newHistoryEvent],
+            };
+        }));
+    };
+
+    return { prospects, users, loading, addProspect, updateProspect, updateLoan, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, reopenProspect, rejectProspect, recordLoanPayment };
 };

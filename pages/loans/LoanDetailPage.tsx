@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useProspects } from '../prospects/useProspects';
+import { useLenders } from '../lenders/useLenders';
 import { Prospect } from '../prospects/types';
 import LoanDetailSidebar, { Section, SubSection } from './detail/LoanDetailSidebar';
 import LoanDetailHeader from './detail/LoanDetailHeader';
@@ -11,14 +12,17 @@ import FundingSection from './detail/sections/FundingSection';
 import PropertiesSection from './detail/sections/PropertiesSection';
 import HistorySection from './detail/sections/HistorySection';
 import CoBorrowersSection from './detail/sections/CoBorrowersSection';
+import RecordPaymentModal from './detail/RecordPaymentModal';
 
 const LoanDetailPage: React.FC = () => {
     const { loanId } = useParams<{ loanId: string }>();
     const navigate = useNavigate();
-    const { prospects, loading, updateLoan } = useProspects();
+    const { prospects, loading, updateLoan, recordLoanPayment } = useProspects();
+    const { addFundsToLenderTrust } = useLenders();
     const [loan, setLoan] = useState<Prospect | null>(null);
     const [activeSection, setActiveSection] = useState<Section>('borrower');
     const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
+    const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
 
     useEffect(() => {
         if (!loading) {
@@ -31,6 +35,17 @@ const LoanDetailPage: React.FC = () => {
             }
         }
     }, [loanId, prospects, loading, navigate]);
+    
+    // This effect ensures the local `loan` state is always in sync with the global `prospects` state.
+    useEffect(() => {
+        if (loan) {
+            const freshLoanData = prospects.find(p => p.id === loan.id);
+            if (freshLoanData && JSON.stringify(freshLoanData) !== JSON.stringify(loan)) {
+                setLoan(freshLoanData);
+            }
+        }
+    }, [prospects, loan]);
+
 
     const handleUpdateLoan = (updatedData: Partial<Prospect>) => {
         if (loan) {
@@ -38,6 +53,27 @@ const LoanDetailPage: React.FC = () => {
             setLoan(updatedLoan); // Optimistic update
             updateLoan(loan.id, updatedData);
         }
+    };
+    
+    const handleSavePayment = (paymentData: { date: string; amount: number; notes?: string; distributions: { funderId: string; lender_id: string; amount: number }[] }) => {
+        if (!loan) return;
+
+        // Step 1: Update the loan itself (reduce principal, update funder balances, add history)
+        recordLoanPayment(loan.id, {
+            date: paymentData.date,
+            amount: paymentData.amount,
+            notes: paymentData.notes,
+            distributions: paymentData.distributions,
+        });
+
+        // Step 2: Distribute funds to each lender's trust account
+        paymentData.distributions.forEach(dist => {
+            if (dist.amount > 0) {
+                 addFundsToLenderTrust(dist.lender_id, dist.amount, `Payment distribution from loan ${loan.prospect_code}`);
+            }
+        });
+
+        setPaymentModalOpen(false);
     };
 
     const handleSelect = (section: Section, subSection?: SubSection | null) => {
@@ -65,7 +101,7 @@ const LoanDetailPage: React.FC = () => {
             case 'terms':
                 return <TermsSection loan={loan} onUpdate={handleUpdateLoan} />;
             case 'funding':
-                return <FundingSection loan={loan} onUpdate={handleUpdateLoan} />;
+                return <FundingSection loan={loan} onUpdate={handleUpdateLoan} onRecordPaymentClick={() => setPaymentModalOpen(true)} />;
             case 'properties':
                 return <PropertiesSection loan={loan} onUpdate={handleUpdateLoan} />;
             case 'history':
@@ -94,6 +130,12 @@ const LoanDetailPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+             <RecordPaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setPaymentModalOpen(false)}
+                loan={loan}
+                onSave={handleSavePayment}
+            />
         </DashboardLayout>
     );
 };
