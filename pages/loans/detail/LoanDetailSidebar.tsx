@@ -1,7 +1,7 @@
 import React from 'react';
-import { BorrowerIcon, TermsIcon, FundingIcon, PropertiesIcon, HistoryIcon, UsersIcon } from '../../../components/icons';
+import { BorrowerIcon, TermsIcon, FundingIcon, PropertiesIcon, HistoryIcon, DocumentsIcon } from '../../../components/icons';
 
-export type Section = 'borrower' | 'terms' | 'funding' | 'properties' | 'history';
+export type Section = 'borrower' | 'terms' | 'funding' | 'properties' | 'history' | 'documents';
 export type SubSection = 'co-borrowers';
 
 interface LoanDetailSidebarProps {
@@ -54,6 +54,7 @@ const LoanDetailSidebar: React.FC<LoanDetailSidebarProps> = ({ activeSection, ac
         { name: 'funding', label: 'Funding', icon: FundingIcon },
         { name: 'properties', label: 'Properties', icon: PropertiesIcon },
         { name: 'history', label: 'History', icon: HistoryIcon },
+        { name: 'documents', label: 'Documents', icon: DocumentsIcon },
     ];
 
     return (

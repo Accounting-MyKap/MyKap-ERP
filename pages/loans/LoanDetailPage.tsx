@@ -12,6 +12,7 @@ import FundingSection from './detail/sections/FundingSection';
 import PropertiesSection from './detail/sections/PropertiesSection';
 import HistorySection from './detail/sections/HistorySection';
 import CoBorrowersSection from './detail/sections/CoBorrowersSection';
+import DocumentsSection from './detail/sections/DocumentsSection';
 import RecordPaymentModal from './detail/RecordPaymentModal';
 
 const LoanDetailPage: React.FC = () => {
@@ -108,6 +109,8 @@ const LoanDetailPage: React.FC = () => {
                 return <PropertiesSection loan={loan} onUpdate={handleUpdateLoan} />;
             case 'history':
                 return <HistorySection loan={loan} />;
+            case 'documents':
+                return <DocumentsSection loan={loan} />;
             default:
                 return <div>Select a section</div>;
         }

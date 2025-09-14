@@ -211,9 +211,14 @@ export const useProspects = () => {
         // Optimistic UI update
         syncProspect(updatedProspect);
 
+        // FIX: Destructure out immutable/server-set fields before sending the update payload.
+        // This prevents sending the entire object and ensures a clean update.
+        const { id, created_at, prospect_code, ...updatePayload } = updatedProspect;
+
+
         const { data, error } = await supabase
             .from('prospects')
-            .update(updatedProspect)
+            .update(updatePayload)
             .eq('id', prospectId)
             .select()
             .single();
