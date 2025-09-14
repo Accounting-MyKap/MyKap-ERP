@@ -24,17 +24,6 @@ const UsersPage: React.FC = () => {
     const { users, loading, inviteUser, updateUserRole } = useUsers();
     const [isInviteModalOpen, setInviteModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
-
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return 'Never';
-        return new Date(dateString).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
     
     const handleSaveRole = async (userId: string, newRole: UserRole) => {
         await updateUserRole(userId, newRole);
@@ -64,18 +53,17 @@ const UsersPage: React.FC = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Sign In</th>
                                 <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={5} className="text-center p-4 text-gray-500">Loading users...</td></tr>
+                                <tr><td colSpan={4} className="text-center p-4 text-gray-500">Loading users...</td></tr>
                             ) : (
                                 users.map((user) => (
                                     <tr key={user.id}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.first_name} {user.last_name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email || 'N/A'}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             {user.role ? (
                                                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${roleColors[user.role]}`}>
@@ -87,7 +75,6 @@ const UsersPage: React.FC = () => {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(user.last_sign_in_at)}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button 
                                                 onClick={() => setEditingUser(user)}

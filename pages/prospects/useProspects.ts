@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+// hooks/useProspects.ts
+import { useState, useEffect, useCallback } from 'react';
 import { Prospect, UserProfile, DocumentStatus, ApplicantType, Stage, Document, ClosingDocStatusKey, Funder, HistoryEvent } from './types';
-import { MOCK_PROSPECTS, MOCK_USERS } from './mockData';
-import { generateNewProspect, getInitialDocuments } from './prospectUtils';
+import { supabase } from '../../services/supabase';
+import { generateNewProspect } from './prospectUtils';
 
 
 /**
@@ -34,9 +35,8 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
     }
 
     if (allRequiredDocs.length === 0) {
-        // Even if there are no docs, we might need to advance, but for now we require docs.
-        // In a real scenario, a stage might complete on a manual action.
-        // For now, let's assume auto-advance only happens if there are docs and they are approved.
+        // Edge case: If a stage has no required documents, it should be completable by a manual action,
+        // not automatically. For now, we assume auto-advance only happens if there are docs and they are approved.
         return prospect;
     }
 
@@ -57,7 +57,6 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
 
     if (isLastStage) {
         // Prospect is fully completed. This is where it becomes a "Loan".
-        // Auto-assign 100% funding to the originator (HKF).
         const loanAmount = prospect.loan_amount || 0;
         const closingDate = new Date().toISOString().split('T')[0];
         
@@ -67,12 +66,12 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
             lender_account: 'HKF',
             lender_name: 'Home Kapital Finance LLC DBA MYKAP',
             pct_owned: 1,
-            lender_rate: 0.09, // Example rate, should be dynamic
+            lender_rate: 0.09,
             original_amount: loanAmount,
             principal_balance: loanAmount
         };
 
-        const initialHistoryEvent = {
+        const initialHistoryEvent: HistoryEvent = {
             id: `hist-${crypto.randomUUID()}`,
             date_created: closingDate,
             date_received: closingDate,
@@ -86,7 +85,8 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
             stages: newStages,
             status: 'completed',
             current_stage_name: 'Closing',
-            terms: { // Initialize terms
+            current_stage: newStages.length,
+            terms: {
                 ...prospect.terms,
                 original_amount: loanAmount,
                 principal_balance: loanAmount,
@@ -110,257 +110,256 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
     }
 };
 
-
-// This custom hook simulates fetching and manipulating prospect data.
-// In a real application, the functions inside would make API calls to Supabase.
 export const useProspects = () => {
     const [prospects, setProspects] = useState<Prospect[]>([]);
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Simulate fetching initial data
-    useEffect(() => {
-        setTimeout(() => {
-            setProspects(MOCK_PROSPECTS);
-            setUsers(MOCK_USERS);
-            setLoading(false);
-        }, 1000); // Simulate network delay
+    const fetchProspects = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('prospects')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching prospects:', error);
+            return [];
+        }
+        return data as Prospect[];
     }, []);
 
-    const addProspect = (prospectData: Omit<Prospect, 'id' | 'prospect_code' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
+    const fetchUsers = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name');
+        
+        if (error) {
+            console.error('Error fetching users:', error);
+            return [];
+        }
+        return data as UserProfile[];
+    }, []);
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setLoading(true);
+            const [prospectsData, usersData] = await Promise.all([
+                fetchProspects(),
+                fetchUsers(),
+            ]);
+            setProspects(prospectsData);
+            setUsers(usersData);
+            setLoading(false);
+        };
+        loadInitialData();
+    }, [fetchProspects, fetchUsers]);
+    
+    const syncProspect = (updatedProspect: Prospect) => {
+        setProspects(prev => prev.map(p => p.id === updatedProspect.id ? updatedProspect : p));
+    }
+
+    const addProspect = async (prospectData: Omit<Prospect, 'id' | 'prospect_code' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
         const assignedUser = users.find(u => u.id === prospectData.assigned_to);
         if (!assignedUser) return;
 
         const newProspect = generateNewProspect(prospectData, assignedUser);
 
-        setProspects(prev => [newProspect, ...prev]);
-        // In real app: const { data, error } = await supabase.from('prospects').insert([newProspect]).select();
+        const { data, error } = await supabase
+            .from('prospects')
+            .insert([newProspect])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error adding prospect:', error);
+        } else if (data) {
+            setProspects(prev => [data, ...prev]);
+        }
     };
 
-    const updateProspect = (updatedData: Partial<Prospect> & { id: string }) => {
-        setProspects(prev => prev.map(p => {
-            if (p.id !== updatedData.id) {
-                return p;
-            }
+    const updateProspect = async (updatedData: Partial<Prospect> & { id: string }) => {
+        const { id, ...updateFields } = updatedData;
+        const originalProspect = prospects.find(p => p.id === id);
+        if (!originalProspect) return;
+        
+        // Optimistic update for responsiveness
+        const optimisticallyUpdated = { ...originalProspect, ...updateFields };
+        syncProspect(optimisticallyUpdated);
 
-            const originalProspect = p;
-            let newProspect = { ...originalProspect, ...updatedData };
+        const { data, error } = await supabase
+            .from('prospects')
+            .update(updateFields)
+            .eq('id', id)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('Error updating prospect:', error);
+            syncProspect(originalProspect); // Revert on error
+        } else if (data) {
+            syncProspect(data); // Sync with final DB state
+        }
+    };
+    
+    // Generic function to handle updates to a prospect's state
+    const handleProspectUpdate = async (prospectId: string, updateFunction: (prospect: Prospect) => Prospect) => {
+        const prospectToUpdate = prospects.find(p => p.id === prospectId);
+        if (!prospectToUpdate) return;
 
-            // Logic to update assigned_to_name if assigned_to ID changes
-            if (updatedData.assigned_to && updatedData.assigned_to !== originalProspect.assigned_to) {
-                const assignedUser = users.find(u => u.id === updatedData.assigned_to);
-                if (assignedUser) {
-                    newProspect.assigned_to_name = `${assignedUser.first_name} ${assignedUser.last_name}`;
-                }
-            }
-            
-            // Logic to regenerate Pre-validation documents if borrower or loan type changes
-            const borrowerTypeChanged = updatedData.borrower_type && updatedData.borrower_type !== originalProspect.borrower_type;
-            const loanTypeChanged = updatedData.loan_type && updatedData.loan_type !== originalProspect.loan_type;
+        const updatedProspect = updateFunction(prospectToUpdate);
 
-            if (borrowerTypeChanged || loanTypeChanged) {
-                const newPreValidationDocs = getInitialDocuments(newProspect.borrower_type, newProspect.loan_type);
+        // Optimistic UI update
+        syncProspect(updatedProspect);
 
-                newProspect.stages = newProspect.stages.map(stage => {
-                    if (stage.id === 1) { // Pre-validation is stage 1
-                        // This is a simple replacement. It will reset the status of all pre-validation docs.
-                        // For a real-world app, a more sophisticated merge would be needed to preserve statuses.
-                        return { ...stage, documents: newPreValidationDocs };
-                    }
-                    return stage;
-                });
-            }
+        const { data, error } = await supabase
+            .from('prospects')
+            .update(updatedProspect)
+            .eq('id', prospectId)
+            .select()
+            .single();
 
-            return newProspect;
-        }));
-        // In real app: This would be a complex transaction in Supabase, likely a stored procedure.
+        if (error) {
+            console.error('Failed to update prospect:', error.message);
+            // Revert optimistic update on failure
+            syncProspect(prospectToUpdate);
+        } else if (data) {
+            // Re-sync with the confirmed state from the DB
+            syncProspect(data);
+        }
     };
 
-    const updateLoan = (loanId: string, updatedData: Partial<Prospect>) => {
-        setProspects(prev => prev.map(p => 
-            p.id === loanId ? { ...p, ...updatedData } : p
-        ));
-        // In a real app:
-        // const { data, error } = await supabase.from('prospects').update(updatedData).eq('id', loanId);
-    };
 
     const updateDocumentStatus = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, newStatus: DocumentStatus) => {
-        setProspects(prev => prev.map(p => {
-            if (p.id !== prospectId) return p;
-
+        handleProspectUpdate(prospectId, (p) => {
             const newStages = p.stages.map(s => {
                 if (s.id !== stageId) return s;
-
                 const newDocs = s.documents[applicantType]?.map(d => 
                     d.id === docId ? { ...d, status: newStatus } : d
                 ) || [];
-                
                 return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
             });
 
             let updatedProspect = { ...p, stages: newStages };
-
-            // If a document was approved, check if the stage is now complete.
             if (newStatus === 'approved') {
                 updatedProspect = checkAndAdvanceStage(updatedProspect);
             }
-
             return updatedProspect;
-        }));
+        });
     };
 
     const updateClosingDocumentStatus = (prospectId: string, stageId: number, docId: string, key: ClosingDocStatusKey, value: boolean) => {
-        setProspects(prev => prev.map(p => {
-            if (p.id !== prospectId) return p;
-
-            let docStatusChangedToApproved = false;
-
-            const newStages = p.stages.map(s => {
+        handleProspectUpdate(prospectId, p => {
+             let docStatusChangedToApproved = false;
+             const newStages = p.stages.map(s => {
                 if (s.id !== stageId) return s;
-
                 const newDocs = s.documents.general?.map(d => {
                     if (d.id !== docId) return d;
-
                     const updatedDoc = { ...d, [key]: value };
-
-                    // Check if this update completes the document
                     const isNowComplete = updatedDoc.sent && updatedDoc.signed && updatedDoc.filled;
-                    
                     if (isNowComplete && updatedDoc.status !== 'approved') {
                         updatedDoc.status = 'approved';
-                        docStatusChangedToApproved = true; // Flag that we might need to check for stage advancement
+                        docStatusChangedToApproved = true;
                     } else if (!isNowComplete && updatedDoc.status === 'approved') {
-                        // Reverting completion
                         updatedDoc.status = 'missing';
                     }
-
                     return updatedDoc;
                 }) || [];
-                
                 return { ...s, documents: { ...s.documents, general: newDocs } };
             });
-
             let updatedProspect = { ...p, stages: newStages };
-
-            // If a document's status was just changed to 'approved', check if the stage is now complete.
             if (docStatusChangedToApproved) {
                 updatedProspect = checkAndAdvanceStage(updatedProspect);
             }
-
             return updatedProspect;
-        }));
+        });
     };
 
     const addDocument = (prospectId: string, stageId: number, applicantType: ApplicantType, docName: string) => {
-        setProspects(prev => prev.map(p => {
-             if (p.id !== prospectId) return p;
-
+        handleProspectUpdate(prospectId, p => {
             const newStages = p.stages.map(s => {
                 if (s.id !== stageId) return s;
-
                 const newDoc: Document = {
-                    id: `doc-${Date.now()}`,
-                    name: docName,
-                    status: 'missing' as DocumentStatus,
-                    is_custom: true,
-                    is_optional: false,
+                    id: `doc-${crypto.randomUUID()}`, name: docName, status: 'missing', is_custom: true,
                 };
                 const updatedDocs = [...(s.documents[applicantType] || []), newDoc];
                 return { ...s, documents: { ...s.documents, [applicantType]: updatedDocs } };
             });
             return { ...p, stages: newStages };
-        }));
+        });
     };
-    
-    const deleteDocument = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
-        setProspects(prev => prev.map(p => {
-            if (p.id !== prospectId) return p;
 
+    const deleteDocument = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
+        handleProspectUpdate(prospectId, p => {
             const newStages = p.stages.map(s => {
                 if (s.id !== stageId) return s;
                 const updatedDocs = s.documents[applicantType]?.filter(d => d.id !== docId) || [];
                 return { ...s, documents: { ...s.documents, [applicantType]: updatedDocs } };
             });
             return { ...p, stages: newStages };
-        }));
+        });
     };
 
     const uploadDocument = async (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, file: File): Promise<void> => {
-        // Simulate upload delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-    
-        setProspects(prev => prev.map(p => {
-            if (p.id !== prospectId) return p;
-    
-            // Find the stage to get its name for the folder structure
-            const targetStage = p.stages.find(s => s.id === stageId);
-            if (!targetStage) return p; // Should not happen
-    
-            // Construct the simulated folder path based on prospect and stage
-            const prospectFolder = p.prospect_code;
-            const stageFolder = targetStage.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_'); // Sanitize stage name
-            
-            // In a real app, you would upload to a service and get a URL.
-            // Here, we simulate a structured path.
-            const mockUrl = `https://drive.google.com/drive/folders/mock-${prospectFolder}/${stageFolder}/${file.name}`;
-            
+        const prospectToUpdate = prospects.find(p => p.id === prospectId);
+        if (!prospectToUpdate) throw new Error("Prospect not found");
+
+        const targetStage = prospectToUpdate.stages.find(s => s.id === stageId);
+        if (!targetStage) throw new Error("Stage not found");
+
+        const prospectFolder = prospectToUpdate.prospect_code.replace(/\s+/g, '_');
+        const stageFolder = targetStage.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+        const filePath = `${prospectFolder}/${stageFolder}/${docId}-${file.name}`;
+
+        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
+        if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            throw uploadError;
+        }
+
+        const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath);
+        const publicUrl = urlData.publicUrl;
+
+        handleProspectUpdate(prospectId, p => {
             const newStages = p.stages.map(s => {
                 if (s.id !== stageId) return s;
-                
-                const newDocs = s.documents[applicantType]?.map(d => 
-                    d.id === docId ? { ...d, gdrive_link: mockUrl, status: 'ready_for_review' as DocumentStatus } : d
+                const newDocs = s.documents[applicantType]?.map(d =>
+                    d.id === docId ? { ...d, gdrive_link: publicUrl, status: 'ready_for_review' as DocumentStatus } : d
                 ) || [];
-                
                 return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
             });
-    
             return { ...p, stages: newStages };
-        }));
+        });
     };
 
     const removeDocumentLink = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
-        setProspects(prev => prev.map(p => {
-            if (p.id !== prospectId) return p;
-
+        handleProspectUpdate(prospectId, p => {
             const newStages = p.stages.map(s => {
                 if (s.id !== stageId) return s;
-                
                 const newDocs = s.documents[applicantType]?.map(d => {
                     if (d.id === docId) {
                         const { gdrive_link, ...rest } = d;
+                        // TODO: Delete from Supabase Storage here if needed
                         return { ...rest, status: 'missing' as DocumentStatus };
                     }
                     return d;
                 }) || [];
-                
                 return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
             });
-
             return { ...p, stages: newStages };
-        }));
+        });
     };
-
     
     const rejectProspect = (prospectId: string, stageId: number) => {
-        setProspects(prev => prev.map(p => 
-            p.id === prospectId ? { ...p, status: 'rejected', rejected_at_stage: stageId } : p
-        ));
+        updateProspect({ id: prospectId, status: 'rejected', rejected_at_stage: stageId });
     };
-    
+
     const reopenProspect = (prospectId: string) => {
-         setProspects(prev => prev.map(p => 
-            p.id === prospectId ? { ...p, status: 'in_progress', rejected_at_stage: null } : p
-        ));
+        updateProspect({ id: prospectId, status: 'in_progress', rejected_at_stage: null });
     };
 
     const recordLoanPayment = (loanId: string, payment: { date: string; amount: number; notes?: string; distributions: { funderId: string; amount: number }[] }) => {
-        setProspects(prev => prev.map(p => {
-            if (p.id !== loanId) return p;
-    
-            // 1. Update loan's principal balance
+        handleProspectUpdate(loanId, p => {
             const newPrincipalBalance = (p.terms?.principal_balance || 0) - payment.amount;
-    
-            // 2. Create new history event for the payment
             const newHistoryEvent: HistoryEvent = {
                 id: `hist-${crypto.randomUUID()}`,
                 date_created: new Date().toISOString().split('T')[0],
@@ -369,34 +368,28 @@ export const useProspects = () => {
                 total_amount: payment.amount,
                 notes: payment.notes,
             };
-    
-            // 3. Update each funder's principal balance based on the specific distributions
             const updatedFunders = (p.funders || []).map(funder => {
                 const distribution = payment.distributions.find(d => d.funderId === funder.id);
                 const funderReduction = distribution ? distribution.amount : 0;
-                return {
-                    ...funder,
-                    principal_balance: funder.principal_balance - funderReduction,
-                };
+                return { ...funder, principal_balance: funder.principal_balance - funderReduction };
             });
-    
-            // 4. Recalculate ownership percentage based on the new principal balances
             const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
-            const finalFunders = totalPrincipal > 0 
+            const finalFunders = totalPrincipal > 0
                 ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))
-                : updatedFunders.map(f => ({ ...f, pct_owned: 0 })); // Handle case where loan is paid off
+                : updatedFunders.map(f => ({ ...f, pct_owned: 0 }));
 
             return {
                 ...p,
-                terms: {
-                    ...p.terms,
-                    principal_balance: newPrincipalBalance,
-                },
+                terms: { ...p.terms, principal_balance: newPrincipalBalance },
                 funders: finalFunders,
                 history: [...(p.history || []), newHistoryEvent],
             };
-        }));
+        });
     };
-
-    return { prospects, users, loading, addProspect, updateProspect, updateLoan, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, uploadDocument, removeDocumentLink, reopenProspect, rejectProspect, recordLoanPayment };
+    
+    return { 
+        prospects, users, loading, addProspect, updateProspect, updateDocumentStatus, 
+        updateClosingDocumentStatus, addDocument, deleteDocument, uploadDocument, 
+        removeDocumentLink, reopenProspect, rejectProspect, recordLoanPayment 
+    };
 };

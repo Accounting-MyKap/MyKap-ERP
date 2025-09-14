@@ -1,8 +1,7 @@
 // pages/users/useUsers.ts
 import { useState, useEffect } from 'react';
 import { UserWithRole, UserRole } from './types';
-import { MOCK_APP_USERS } from './mockUserData';
-// import { supabase } from '../../services/supabase';
+import { supabase } from '../../services/supabase';
 
 export const useUsers = () => {
     const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -11,22 +10,23 @@ export const useUsers = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             setLoading(true);
-            // MOCK IMPLEMENTATION
-            setTimeout(() => {
-                setUsers(MOCK_APP_USERS);
-                setLoading(false);
-            }, 500);
-
-            // REAL IMPLEMENTATION
-            // const { data, error } = await supabase.from('profiles').select('id, email, first_name, last_name, role');
-            // if (error) {
-            //     console.error('Error fetching users:', error);
-            // } else {
-            //     // We would need to join with auth.users to get email and last_sign_in_at
-            //     // This is a simplified example.
-            //     setUsers(data as UserWithRole[]);
-            // }
-            // setLoading(false);
+            // In a real app, you would need a secure way to get all users.
+            // This is often done via an RPC call to a Supabase function that can join
+            // auth.users with public.profiles.
+            // For simplicity here, we'll query the public profiles table,
+            // assuming it has all the necessary info like an email column.
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name, role'); // Assuming 'email' is not in 'profiles' based on screenshot.
+            
+            if (error) {
+                console.error('Error fetching users:', error);
+            } else {
+                 // The 'email' and 'last_sign_in_at' are not available here.
+                 // The UI must be adapted to handle this.
+                setUsers(data as UserWithRole[]);
+            }
+            setLoading(false);
         };
 
         fetchUsers();
@@ -34,43 +34,35 @@ export const useUsers = () => {
 
     const inviteUser = async (email: string, role: UserRole) => {
         console.log(`Inviting user ${email} with role ${role}`);
-        // MOCK IMPLEMENTATION
-        const newUser: UserWithRole = {
-            id: crypto.randomUUID(),
-            email,
-            first_name: 'Invited',
-            last_name: 'User',
-            role,
-        };
-        setUsers(prev => [...prev, newUser]);
-        alert(`Invitation sent to ${email}!`);
+        // NOTE: Inviting a user is an admin-level action that requires the service_role key.
+        // This CANNOT be safely done from the client-side. In a real production app,
+        // you MUST move this logic to a Supabase Edge Function and call it from the client.
+        alert("This is a demo action. In a real app, an Edge Function would handle the secure invitation.");
         
-        // REAL SUPABASE IMPLEMENTATION
-        // const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-        //     data: { role: role } // This assumes you have a way to set role on invite
+        // Example Edge Function call:
+        // const { data, error } = await supabase.functions.invoke('invite-user', {
+        //     body: { email, role },
         // });
-        // if (error) {
-        //     console.error("Invitation Error:", error);
-        //     alert(`Failed to invite user: ${error.message}`);
-        // } else {
-        //     alert(`Invitation sent to ${email}!`);
-        //     // You would probably re-fetch users here
-        // }
+        // if (error) { ... } else { ... }
     };
 
-    const updateUserRole = async (userId: string, newRole: UserRole) => {
-        console.log(`Updating user ${userId} to role ${newRole}`);
-        // MOCK IMPLEMENTATION
+    const updateUserRole = async (userId: string, newRole: UserRole | null) => {
+        // Optimistic update
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
         
-        // REAL SUPABASE IMPLEMENTATION
-        // const { data, error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
-        // if (error) {
-        //     console.error("Update Role Error:", error);
-        //     alert(`Failed to update role: ${error.message}`);
-        // } else {
-        //     // Re-fetch or update state
-        // }
+        const { error } = await supabase
+            .from('profiles')
+            .update({ role: newRole })
+            .eq('id', userId);
+            
+        if (error) {
+            console.error("Update Role Error:", error);
+            alert(`Failed to update role: ${error.message}`);
+            // Re-fetch to revert state on error
+            // This could be improved by storing original state and reverting.
+            const { data } = await supabase.from('profiles').select('*');
+            if (data) setUsers(data as UserWithRole[]);
+        }
     };
 
     return { users, loading, inviteUser, updateUserRole };

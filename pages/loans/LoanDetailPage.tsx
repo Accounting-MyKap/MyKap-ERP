@@ -17,7 +17,8 @@ import RecordPaymentModal from './detail/RecordPaymentModal';
 const LoanDetailPage: React.FC = () => {
     const { loanId } = useParams<{ loanId: string }>();
     const navigate = useNavigate();
-    const { prospects, loading, updateLoan, recordLoanPayment } = useProspects();
+    // FIX: Destructure 'updateProspect' instead of non-existent 'updateLoan'
+    const { prospects, loading, updateProspect, recordLoanPayment } = useProspects();
     const { addFundsToLenderTrust } = useLenders();
     const [loan, setLoan] = useState<Prospect | null>(null);
     const [activeSection, setActiveSection] = useState<Section>('borrower');
@@ -51,7 +52,8 @@ const LoanDetailPage: React.FC = () => {
         if (loan) {
             const updatedLoan = { ...loan, ...updatedData };
             setLoan(updatedLoan); // Optimistic update
-            updateLoan(loan.id, updatedData);
+            // FIX: Call 'updateProspect' with the correct single-object argument signature
+            updateProspect({ id: loan.id, ...updatedData });
         }
     };
     

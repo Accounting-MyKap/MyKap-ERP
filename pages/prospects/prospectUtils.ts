@@ -78,10 +78,8 @@ const getStageSpecificDocs = (stageName: string): Stage['documents'] => {
 export const generateNewProspect = (
     prospectData: Omit<Prospect, 'id' | 'prospect_code' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>,
     assignedUser: UserProfile
-): Prospect => {
-    const prospectId = `prospect-${Date.now()}`;
-    const prospectCode = `HKF-ML${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, '0')}`;
-
+): Omit<Prospect, 'id' | 'created_at' | 'prospect_code'> => {
+    
     const initialStages: Stage[] = STAGE_NAMES.map((name, index) => {
         const stageId = index + 1;
         let documents: Stage['documents'] = {};
@@ -101,14 +99,11 @@ export const generateNewProspect = (
     });
 
     return {
-        id: prospectId,
-        prospect_code: prospectCode,
-        created_at: new Date().toISOString(),
+        ...prospectData,
         status: 'in_progress',
         current_stage: 1,
         current_stage_name: 'Pre-validation',
         assigned_to_name: `${assignedUser.first_name} ${assignedUser.last_name}`,
         stages: initialStages,
-        ...prospectData,
     };
 };
