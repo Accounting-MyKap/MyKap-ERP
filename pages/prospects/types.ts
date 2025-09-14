@@ -150,7 +150,7 @@ export interface TrustAccountEvent {
 
 export interface Prospect {
     id: string;
-    prospect_code: string;
+    prospect_code: string | null;
     created_at: string;
     status: 'in_progress' | 'completed' | 'rejected';
     current_stage: number;

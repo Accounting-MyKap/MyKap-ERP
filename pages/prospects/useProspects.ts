@@ -306,7 +306,9 @@ export const useProspects = () => {
         const targetStage = prospectToUpdate.stages.find(s => s.id === stageId);
         if (!targetStage) throw new Error("Stage not found");
 
-        const prospectFolder = prospectToUpdate.prospect_code.replace(/\s+/g, '_');
+        // FIX: Use prospect ID as a fallback for the folder path if prospect_code is missing.
+        // This prevents crashes when uploading documents for newly created prospects.
+        const prospectFolder = (prospectToUpdate.prospect_code || prospectToUpdate.id).replace(/\s+/g, '_');
         const stageFolder = targetStage.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
         const filePath = `${prospectFolder}/${stageFolder}/${docId}-${file.name}`;
 
