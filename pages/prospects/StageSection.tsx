@@ -73,6 +73,8 @@ const StageSection: React.FC<StageSectionProps> = ({
                         <ClosingDocumentManager
                             documents={stage.documents.general || []}
                             onUpdateStatus={onUpdateClosingDocumentStatus}
+                            onUploadDocument={(docId, file) => onUploadDocument(docId, 'general', file)}
+                            onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, 'general')}
                         />
                     ) : (
                         applicantTypesWithDocs.map(type => 
