@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+// This file was missing. It defines the collapsible section for each prospect stage.
+import React from 'react';
 import { Stage, Prospect, DocumentStatus, ApplicantType, ClosingDocStatusKey } from './types';
-import { ChevronDownIcon, ChevronRightIcon } from '../../components/icons';
 import DocumentManager from './DocumentManager';
 import ClosingDocumentManager from './ClosingDocumentManager';
+import { ChevronDownIcon, ChevronUpIcon } from '../../components/icons';
 
 interface StageSectionProps {
     stage: Stage;
@@ -16,111 +17,79 @@ interface StageSectionProps {
 }
 
 const StageSection: React.FC<StageSectionProps> = ({ 
-    stage, 
-    prospect, 
+    stage,
+    prospect,
     onUpdateDocumentStatus,
     onUpdateClosingDocumentStatus,
     onAddDocument,
     onDeleteDocument,
     onUploadDocument,
-    onRemoveDocumentLink,
+    onRemoveDocumentLink
 }) => {
     const isCurrentStage = stage.status === 'in_progress';
-    const [isOpen, setIsOpen] = useState(isCurrentStage);
+    const isCompleted = stage.status === 'completed';
+    const [isOpen, setIsOpen] = React.useState(isCurrentStage);
 
-    // This effect ensures that the accordion section automatically opens
-    // when its corresponding stage becomes active.
-    useEffect(() => {
-        if (stage.status === 'in_progress') {
-            setIsOpen(true);
+    const toggleOpen = () => {
+        if (stage.status !== 'locked') {
+            setIsOpen(!isOpen);
         }
-    }, [stage.status]);
-
-    const { borrower_type } = prospect;
-
-    const renderDocumentManagers = () => {
-        if (stage.name.toLowerCase() === 'closing') {
-            return <ClosingDocumentManager 
-                documents={stage.documents.general || []}
-                onUpdateStatus={onUpdateClosingDocumentStatus}
-            />;
-        }
-
-        if (stage.name.toLowerCase() !== 'pre-validation') {
-            // For stages like KYC, Title Work, etc.
-            const documents = stage.documents.general || [];
-            return (
-                <DocumentManager 
-                    title="Required Documents"
-                    documents={documents}
-                    onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "general", status)}
-                    onAddDocument={(docName) => onAddDocument("general", docName)}
-                    onDeleteDocument={(docId) => onDeleteDocument(docId, "general")}
-                    onUploadDocument={(docId, file) => onUploadDocument(docId, "general", file)}
-                    onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "general")}
-                />
-            );
-        }
-
-        // --- Logic for Pre-validation Stage ---
-        const showIndividual = borrower_type === 'individual' || borrower_type === 'both';
-        const showCompany = borrower_type === 'company' || borrower_type === 'both';
-
-        return (
-            <div className="space-y-4">
-                {showIndividual && (
-                    <DocumentManager 
-                        title="Individual Documents"
-                        documents={stage.documents.individual || []}
-                        onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "individual", status)}
-                        onAddDocument={(docName) => onAddDocument("individual", docName)}
-                        onDeleteDocument={(docId) => onDeleteDocument(docId, "individual")}
-                        onUploadDocument={(docId, file) => onUploadDocument(docId, "individual", file)}
-                        onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "individual")}
-                    />
-                )}
-                {showCompany && (
-                    <DocumentManager 
-                        title="Company Documents"
-                        documents={stage.documents.company || []}
-                        onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "company", status)}
-                        onAddDocument={(docName) => onAddDocument("company", docName)}
-                        onDeleteDocument={(docId) => onDeleteDocument(docId, "company")}
-                        onUploadDocument={(docId, file) => onUploadDocument(docId, "company", file)}
-                        onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "company")}
-                    />
-                )}
-                {/* Property documents are always part of pre-validation */}
-                {(stage.documents.property && stage.documents.property.length > 0) && (
-                     <DocumentManager 
-                        title="Property Documents"
-                        documents={stage.documents.property}
-                        onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "property", status)}
-                        onAddDocument={(docName) => onAddDocument("property", docName)}
-                        onDeleteDocument={(docId) => onDeleteDocument(docId, "property")}
-                        onUploadDocument={(docId, file) => onUploadDocument(docId, "property", file)}
-                        onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "property")}
-                    />
-                )}
-            </div>
-        );
     };
+
+    const isClosingStage = stage.name.toLowerCase() === 'closing';
+
+    const getApplicantTypesWithDocs = (): ApplicantType[] => {
+        return Object.keys(stage.documents) as ApplicantType[];
+    };
+    
+    const applicantTypesWithDocs = getApplicantTypesWithDocs();
 
     return (
         <div className="border border-gray-200 rounded-lg">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleOpen}
                 disabled={stage.status === 'locked'}
-                className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className={`w-full flex justify-between items-center p-3 text-left ${
+                    isCurrentStage ? 'bg-blue-50' : isCompleted ? 'bg-green-50' : 'bg-gray-50'
+                } ${stage.status !== 'locked' ? 'hover:bg-gray-100' : 'cursor-default'}`}
             >
-                <h3 className={`font-semibold ${stage.status === 'locked' ? 'text-gray-400' : 'text-gray-800'}`}>{stage.id}. {stage.name}</h3>
-                {stage.status !== 'locked' && (
-                    isOpen ? <ChevronDownIcon className="h-5 w-5 text-gray-600"/> : <ChevronRightIcon className="h-5 w-5 text-gray-600"/>
-                )}
+                <div className="flex items-center">
+                    <span className={`font-semibold ${
+                        isCurrentStage ? 'text-blue-800' : isCompleted ? 'text-green-800' : 'text-gray-800'
+                    }`}>{stage.id}. {stage.name}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                     <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${
+                        isCurrentStage ? 'bg-blue-200 text-blue-800' :
+                        isCompleted ? 'bg-green-200 text-green-800' :
+                        'bg-gray-200 text-gray-600'
+                    }`}>{stage.status.replace('_', ' ')}</span>
+                    {stage.status !== 'locked' && (isOpen ? <ChevronUpIcon className="h-5 w-5"/> : <ChevronDownIcon className="h-5 w-5"/>)}
+                </div>
             </button>
             {isOpen && stage.status !== 'locked' && (
-                <div className="p-4">
-                    {renderDocumentManagers()}
+                <div className="p-4 space-y-4">
+                    {isClosingStage ? (
+                        <ClosingDocumentManager
+                            documents={stage.documents.general || []}
+                            onUpdateStatus={onUpdateClosingDocumentStatus}
+                        />
+                    ) : (
+                        applicantTypesWithDocs.map(type => 
+                            (stage.documents[type] && stage.documents[type]!.length > 0) && (
+                                <DocumentManager 
+                                    key={type}
+                                    title={`${type.charAt(0).toUpperCase() + type.slice(1)} Documents`}
+                                    documents={stage.documents[type] || []}
+                                    onUpdateStatus={(docId, newStatus) => onUpdateDocumentStatus(docId, type, newStatus)}
+                                    onAddDocument={(docName) => onAddDocument(type, docName)}
+                                    onDeleteDocument={(docId) => onDeleteDocument(docId, type)}
+                                    onUploadDocument={(docId, file) => onUploadDocument(docId, type, file)}
+                                    onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, type)}
+                                />
+                            )
+                        )
+                    )}
                 </div>
             )}
         </div>
