@@ -284,6 +284,62 @@ export const useProspects = () => {
             return { ...p, stages: newStages };
         }));
     };
+
+    const uploadDocument = async (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, file: File): Promise<void> => {
+        // Simulate upload delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+    
+        setProspects(prev => prev.map(p => {
+            if (p.id !== prospectId) return p;
+    
+            // Find the stage to get its name for the folder structure
+            const targetStage = p.stages.find(s => s.id === stageId);
+            if (!targetStage) return p; // Should not happen
+    
+            // Construct the simulated folder path based on prospect and stage
+            const prospectFolder = p.prospect_code;
+            const stageFolder = targetStage.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_'); // Sanitize stage name
+            
+            // In a real app, you would upload to a service and get a URL.
+            // Here, we simulate a structured path.
+            const mockUrl = `https://drive.google.com/drive/folders/mock-${prospectFolder}/${stageFolder}/${file.name}`;
+            
+            const newStages = p.stages.map(s => {
+                if (s.id !== stageId) return s;
+                
+                const newDocs = s.documents[applicantType]?.map(d => 
+                    d.id === docId ? { ...d, gdrive_link: mockUrl, status: 'ready_for_review' as DocumentStatus } : d
+                ) || [];
+                
+                return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
+            });
+    
+            return { ...p, stages: newStages };
+        }));
+    };
+
+    const removeDocumentLink = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
+        setProspects(prev => prev.map(p => {
+            if (p.id !== prospectId) return p;
+
+            const newStages = p.stages.map(s => {
+                if (s.id !== stageId) return s;
+                
+                const newDocs = s.documents[applicantType]?.map(d => {
+                    if (d.id === docId) {
+                        const { gdrive_link, ...rest } = d;
+                        return { ...rest, status: 'missing' as DocumentStatus };
+                    }
+                    return d;
+                }) || [];
+                
+                return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
+            });
+
+            return { ...p, stages: newStages };
+        }));
+    };
+
     
     const rejectProspect = (prospectId: string, stageId: number) => {
         setProspects(prev => prev.map(p => 
@@ -342,5 +398,5 @@ export const useProspects = () => {
         }));
     };
 
-    return { prospects, users, loading, addProspect, updateProspect, updateLoan, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, reopenProspect, rejectProspect, recordLoanPayment };
+    return { prospects, users, loading, addProspect, updateProspect, updateLoan, updateDocumentStatus, updateClosingDocumentStatus, addDocument, deleteDocument, uploadDocument, removeDocumentLink, reopenProspect, rejectProspect, recordLoanPayment };
 };

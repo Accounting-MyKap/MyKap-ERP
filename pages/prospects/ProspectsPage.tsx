@@ -21,6 +21,8 @@ const ProspectsPage: React.FC = () => {
         updateClosingDocumentStatus,
         addDocument, 
         deleteDocument,
+        uploadDocument,
+        removeDocumentLink,
         reopenProspect,
         rejectProspect, 
     } = useProspects();
@@ -80,6 +82,8 @@ const ProspectsPage: React.FC = () => {
                             onUpdateClosingDocumentStatus={updateClosingDocumentStatus}
                             onAddDocument={addDocument}
                             onDeleteDocument={deleteDocument}
+                            onUploadDocument={uploadDocument}
+                            onRemoveDocumentLink={removeDocumentLink}
                             onReopenProspect={reopenProspect}
                             onRejectProspect={rejectProspect}
                         />

@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Document, DocumentStatus, ApplicantType } from './types';
-import { AddIcon, TrashIcon } from '../../components/icons';
+import React, { useState, useRef } from 'react';
+import { Document, DocumentStatus } from './types';
+import { AddIcon, TrashIcon, UploadIcon, CloseIcon } from '../../components/icons';
 
 interface DocumentManagerProps {
     title: string;
     documents: Document[];
-    applicantType: ApplicantType;
     onUpdateStatus: (docId: string, newStatus: DocumentStatus) => void;
     onAddDocument: (docName: string) => void;
     onDeleteDocument: (docId: string) => void;
+    onUploadDocument: (docId: string, file: File) => Promise<void>;
+    onRemoveDocumentLink: (docId: string) => void;
 }
 
 const statusColors: { [key in DocumentStatus]: string } = {
@@ -18,18 +19,18 @@ const statusColors: { [key in DocumentStatus]: string } = {
     rejected: 'text-red-800 font-bold',
 };
 
-const DocumentManager: React.FC<DocumentManagerProps> = ({ title, documents, applicantType, onUpdateStatus, onAddDocument, onDeleteDocument }) => {
+const DocumentManager: React.FC<DocumentManagerProps> = ({ title, documents, onUpdateStatus, onAddDocument, onDeleteDocument, onUploadDocument, onRemoveDocumentLink }) => {
     const [newDocName, setNewDocName] = useState('');
+    const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [docIdForUpload, setDocIdForUpload] = useState<string | null>(null);
 
     const handleToggleReview = (doc: Document) => {
-        // This function acts as the primary user interaction for changing document state before final approval/rejection.
         if (doc.status === 'missing' || doc.status === 'rejected') {
             onUpdateStatus(doc.id, 'ready_for_review');
         } else if (doc.status === 'ready_for_review') {
-            // Allow unchecking to revert to 'missing'
             onUpdateStatus(doc.id, 'missing');
         }
-        // If 'approved', clicking the checkbox does nothing.
     };
 
     const handleAddNewDocument = () => {
@@ -39,8 +40,33 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ title, documents, app
         }
     };
     
+    const handleUploadClick = (docId: string) => {
+        setDocIdForUpload(docId);
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file && docIdForUpload) {
+            setUploadingDocId(docIdForUpload);
+            try {
+                await onUploadDocument(docIdForUpload, file);
+            } catch (error) {
+                console.error("Upload failed", error);
+                alert("File upload failed. Please try again.");
+            } finally {
+                setUploadingDocId(null);
+                setDocIdForUpload(null);
+                if(fileInputRef.current) {
+                    fileInputRef.current.value = ''; // Reset file input
+                }
+            }
+        }
+    };
+    
     return (
         <div>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
             <h4 className="font-semibold text-gray-700 mb-2">{title}</h4>
             <div className="space-y-3">
                 {documents.map(doc => (
@@ -53,7 +79,11 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ title, documents, app
                                 disabled={doc.status === 'approved'}
                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
                             />
-                            <span className="ml-3 text-sm text-gray-800">{doc.name}</span>
+                             {doc.gdrive_link ? (
+                                <a href={doc.gdrive_link} target="_blank" rel="noopener noreferrer" className="ml-3 text-sm text-blue-600 hover:underline">{doc.name}</a>
+                            ) : (
+                                <span className="ml-3 text-sm text-gray-800">{doc.name}</span>
+                            )}
                             {doc.is_optional && <span className="ml-2 text-xs text-gray-500 italic">(Optional)</span>}
                              {doc.is_custom && (
                                 <button onClick={() => onDeleteDocument(doc.id)} className="ml-2 text-gray-400 hover:text-red-500">
@@ -62,6 +92,22 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ title, documents, app
                             )}
                         </div>
                         <div className="flex items-center space-x-2">
+                           {doc.gdrive_link ? (
+                                <button onClick={() => onRemoveDocumentLink(doc.id)} className="text-gray-400 hover:text-red-500" title="Remove uploaded document">
+                                    <CloseIcon className="h-4 w-4"/>
+                                </button>
+                           ) : (
+                                <>
+                                    {uploadingDocId === doc.id ? (
+                                        <span className="text-xs text-gray-500 italic">Uploading...</span>
+                                    ) : (
+                                        <button onClick={() => handleUploadClick(doc.id)} className="flex items-center text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300" title="Upload document">
+                                           <UploadIcon className="h-3 w-3 mr-1" /> Upload
+                                        </button>
+                                    )}
+                                </>
+                           )}
+                           
                            {doc.status === 'ready_for_review' && (
                                 <>
                                     <button onClick={() => onUpdateStatus(doc.id, 'approved')} className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Approve</button>

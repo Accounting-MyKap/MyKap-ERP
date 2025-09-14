@@ -11,6 +11,8 @@ interface StageSectionProps {
     onUpdateClosingDocumentStatus: (docId: string, key: ClosingDocStatusKey, value: boolean) => void;
     onAddDocument: (applicantType: ApplicantType, docName: string) => void;
     onDeleteDocument: (docId: string, applicantType: ApplicantType) => void;
+    onUploadDocument: (docId: string, applicantType: ApplicantType, file: File) => Promise<void>;
+    onRemoveDocumentLink: (docId: string, applicantType: ApplicantType) => void;
 }
 
 const StageSection: React.FC<StageSectionProps> = ({ 
@@ -19,7 +21,9 @@ const StageSection: React.FC<StageSectionProps> = ({
     onUpdateDocumentStatus,
     onUpdateClosingDocumentStatus,
     onAddDocument,
-    onDeleteDocument
+    onDeleteDocument,
+    onUploadDocument,
+    onRemoveDocumentLink,
 }) => {
     const isCurrentStage = stage.status === 'in_progress';
     const [isOpen, setIsOpen] = useState(isCurrentStage);
@@ -49,10 +53,11 @@ const StageSection: React.FC<StageSectionProps> = ({
                 <DocumentManager 
                     title="Required Documents"
                     documents={documents}
-                    applicantType="general"
                     onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "general", status)}
                     onAddDocument={(docName) => onAddDocument("general", docName)}
                     onDeleteDocument={(docId) => onDeleteDocument(docId, "general")}
+                    onUploadDocument={(docId, file) => onUploadDocument(docId, "general", file)}
+                    onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "general")}
                 />
             );
         }
@@ -67,20 +72,22 @@ const StageSection: React.FC<StageSectionProps> = ({
                     <DocumentManager 
                         title="Individual Documents"
                         documents={stage.documents.individual || []}
-                        applicantType="individual"
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "individual", status)}
                         onAddDocument={(docName) => onAddDocument("individual", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "individual")}
+                        onUploadDocument={(docId, file) => onUploadDocument(docId, "individual", file)}
+                        onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "individual")}
                     />
                 )}
                 {showCompany && (
                     <DocumentManager 
                         title="Company Documents"
                         documents={stage.documents.company || []}
-                        applicantType="company"
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "company", status)}
                         onAddDocument={(docName) => onAddDocument("company", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "company")}
+                        onUploadDocument={(docId, file) => onUploadDocument(docId, "company", file)}
+                        onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "company")}
                     />
                 )}
                 {/* Property documents are always part of pre-validation */}
@@ -88,10 +95,11 @@ const StageSection: React.FC<StageSectionProps> = ({
                      <DocumentManager 
                         title="Property Documents"
                         documents={stage.documents.property}
-                        applicantType="property"
                         onUpdateStatus={(docId, status) => onUpdateDocumentStatus(docId, "property", status)}
                         onAddDocument={(docName) => onAddDocument("property", docName)}
                         onDeleteDocument={(docId) => onDeleteDocument(docId, "property")}
+                        onUploadDocument={(docId, file) => onUploadDocument(docId, "property", file)}
+                        onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, "property")}
                     />
                 )}
             </div>

@@ -127,3 +127,7 @@ export const PaymentIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 export const WithdrawalIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75m-18 0a48.008 48.008 0 015.162-1.853A48.008 48.008 0 0112 15c2.11 0 4.198.25 6.188.735a48.008 48.008 0 015.162 1.853m-18 0v-9a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121.75 9.75v9m-18 0h18M12 12.75h.008v.008H12v-.008z" /></Icon>
 );
+
+export const UploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></Icon>
+);

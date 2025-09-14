@@ -11,6 +11,7 @@ export interface Document {
     status: DocumentStatus;
     is_custom: boolean;
     is_optional?: boolean;
+    gdrive_link?: string;
     // For closing docs
     sent?: boolean;
     signed?: boolean;

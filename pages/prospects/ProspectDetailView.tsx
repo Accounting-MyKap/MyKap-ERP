@@ -13,6 +13,8 @@ interface ProspectDetailViewProps {
     onUpdateClosingDocumentStatus: (prospectId: string, stageId: number, docId: string, key: ClosingDocStatusKey, value: boolean) => void;
     onAddDocument: (prospectId: string, stageId: number, applicantType: ApplicantType, docName: string) => void;
     onDeleteDocument: (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => void;
+    onUploadDocument: (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, file: File) => Promise<void>;
+    onRemoveDocumentLink: (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => void;
     onReopenProspect: (prospectId: string) => void;
     onRejectProspect: (prospectId: string, stageId: number) => void;
 }
@@ -25,6 +27,8 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = ({
     onUpdateClosingDocumentStatus,
     onAddDocument,
     onDeleteDocument,
+    onUploadDocument,
+    onRemoveDocumentLink,
     onReopenProspect,
     onRejectProspect,
 }) => {
@@ -100,6 +104,8 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = ({
                         onUpdateClosingDocumentStatus={(docId, key, value) => onUpdateClosingDocumentStatus(prospect.id, stage.id, docId, key, value)}
                         onAddDocument={(applicantType, docName) => onAddDocument(prospect.id, stage.id, applicantType, docName)}
                         onDeleteDocument={(docId, applicantType) => onDeleteDocument(prospect.id, stage.id, docId, applicantType)}
+                        onUploadDocument={(docId, applicantType, file) => onUploadDocument(prospect.id, stage.id, docId, applicantType, file)}
+                        onRemoveDocumentLink={(docId, applicantType) => onRemoveDocumentLink(prospect.id, stage.id, docId, applicantType)}
                     />
                 ))}
             </div>
