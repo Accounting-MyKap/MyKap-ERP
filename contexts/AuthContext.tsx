@@ -10,6 +10,7 @@ interface Profile {
   middle_name: string | null;
   second_surname: string | null;
   phone_number: string | null;
+  role: 'admin' | 'loan_officer' | 'financial_officer' | null;
 }
 
 // Define the context shape
@@ -125,7 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('[Update Profile] Supabase update error:', error);
     } else if (data) {
         console.log('[Update Profile] Update successful. New profile data:', data);
-        setProfile(data);
+        setProfile(data as Profile);
     }
     
     return { error };

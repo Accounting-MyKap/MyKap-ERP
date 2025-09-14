@@ -11,6 +11,7 @@ import LoanDetailPage from './pages/loans/LoanDetailPage';
 import LendersPage from './pages/lenders/LendersPage';
 import SettingsPage from './pages/SettingsPage';
 import LenderDetailPage from './pages/lenders/detail/LenderDetailPage';
+import UsersPage from './pages/users/UsersPage';
 
 // A custom component to protect routes that require authentication.
 const ProtectedRoute: React.FC = () => {
@@ -49,6 +50,7 @@ const App: React.FC = () => {
             <Route path="/lenders/new" element={<LenderDetailPage />} />
             <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/users" element={<UsersPage />} />
             {/* Redirect root to dashboard if logged in */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>

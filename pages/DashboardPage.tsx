@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Header from '../components/Header';
 import { ProspectsIcon, CreditsIcon, LendersIcon } from '../components/icons';
+import { useAuth } from '../hooks/useAuth';
 
 const ModuleCard: React.FC<{ icon: React.ElementType; title: string; description: string }> = ({ icon: Icon, title, description }) => (
     <div className="bg-white rounded-xl shadow-md p-6 flex items-start space-x-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full">
@@ -16,7 +17,20 @@ const ModuleCard: React.FC<{ icon: React.ElementType; title: string; description
     </div>
 );
 
+const PendingApproval: React.FC = () => (
+    <div className="bg-white rounded-xl shadow-md p-8 text-center">
+        <h2 className="text-2xl font-bold text-gray-800">Account Pending Approval</h2>
+        <p className="mt-2 text-gray-600">
+            Your account has been successfully created but requires an administrator to assign you a role before you can access any modules. 
+            Please contact your system administrator.
+        </p>
+    </div>
+);
+
+
 const DashboardPage: React.FC = () => {
+    const { profile } = useAuth();
+
     const modules = [
         {
             title: "Prospects",
@@ -41,22 +55,26 @@ const DashboardPage: React.FC = () => {
     return (
         <DashboardLayout>
             <Header />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {modules.map((module, index) => {
-                    if (module.path) {
+            {profile?.role ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {modules.map((module, index) => {
+                        if (module.path) {
+                            return (
+                                <Link to={module.path} key={index} className="block">
+                                    <ModuleCard title={module.title} description={module.description} icon={module.icon} />
+                                </Link>
+                            )
+                        }
                         return (
-                             <Link to={module.path} key={index} className="block">
+                            <div key={index} className="opacity-60 cursor-not-allowed">
                                 <ModuleCard title={module.title} description={module.description} icon={module.icon} />
-                            </Link>
+                            </div>
                         )
-                    }
-                    return (
-                        <div key={index} className="opacity-60 cursor-not-allowed">
-                             <ModuleCard title={module.title} description={module.description} icon={module.icon} />
-                        </div>
-                    )
-                })}
-            </div>
+                    })}
+                </div>
+            ) : (
+                <PendingApproval />
+            )}
         </DashboardLayout>
     );
 };
