@@ -62,9 +62,9 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
         
         const originatorFunder: Funder = {
             id: `funder-${crypto.randomUUID()}`,
-            lender_id: 'lender-2', // Hardcoded ID for 'Home Kapital Finance LLC'
+            lender_id: 'a6b2b7da-ffca-422c-91ef-36e6581b50f1', // Hardcoded ID for 'Home Kapital Finance LLC'
             lender_account: 'HKF',
-            lender_name: 'Home Kapital Finance LLC DBA MYKAP',
+            lender_name: 'Home Kapital Finance LLC',
             pct_owned: 1,
             lender_rate: 0.09,
             original_amount: loanAmount,
