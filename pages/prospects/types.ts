@@ -42,6 +42,8 @@ export interface Address {
     city?: string;
     state?: string;
     zip?: string;
+    county?: string;
+    country?: string;
 }
 export interface BorrowerDetails {
     salutation?: string;
@@ -59,6 +61,15 @@ export interface LoanTerms {
     maturity_date?: string; // YYYY-MM-DD
 }
 
+export interface ServicingFees {
+    rounding_adjustment?: boolean;
+    broker_servicing_fee_enabled?: boolean;
+    broker_servicing_fee_percent?: number; // e.g., 0.0165 for 1.650%
+    broker_servicing_fee_plus_amount?: number;
+    broker_servicing_fee_minimum?: number;
+}
+
+
 export interface Funder {
     id: string;
     lender_id: string;
@@ -68,6 +79,7 @@ export interface Funder {
     lender_rate: number;
     original_amount: number;
     principal_balance: number;
+    servicing_fees?: ServicingFees;
 }
 
 export interface HistoryEvent {
@@ -82,12 +94,21 @@ export interface HistoryEvent {
 export interface Property {
     id: string;
     is_primary: boolean;
+    is_reo?: boolean;
     description: string;
     address: Address;
     property_type: string;
     occupancy: string;
     appraisal_value: number;
     appraisal_date: string; // YYYY-MM-DD
+    ltv?: number;
+    purchase_price?: number;
+    thomas_map?: string;
+    pledged_equity?: number;
+    apn?: string;
+    priority?: string;
+    flood_zone?: string;
+    zoning?: string;
 }
 
 export interface CoBorrower {

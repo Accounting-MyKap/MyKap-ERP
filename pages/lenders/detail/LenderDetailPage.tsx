@@ -2,19 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useLenders } from '../useLenders';
+import { useProspects } from '../../prospects/useProspects';
 import { Lender } from '../../prospects/types';
 import LenderDetailSidebar, { Section } from './LenderDetailSidebar';
 import LenderDetailHeader from './LenderDetailHeader';
 import LenderInfoSection from './sections/LenderInfoSection';
 import TrustAccountSection from './sections/TrustAccountSection';
+import PortfolioSection from './sections/PortfolioSection';
 
 
 const LenderDetailPage: React.FC = () => {
     const { lenderId } = useParams<{ lenderId: string }>();
     const navigate = useNavigate();
-    const { lenders, loading, updateLender } = useLenders();
+    const { lenders, loading: lendersLoading, updateLender } = useLenders();
+    const { prospects: allLoans, loading: loansLoading } = useProspects();
     const [lender, setLender] = useState<Lender | null>(null);
     const [activeSection, setActiveSection] = useState<Section>('info');
+
+    const loading = lendersLoading || loansLoading;
 
     useEffect(() => {
         if (!loading && lenderId) {
@@ -52,6 +57,8 @@ const LenderDetailPage: React.FC = () => {
                 return <LenderInfoSection lender={lender} onUpdate={updateLender} />;
             case 'trust_account':
                 return <TrustAccountSection lender={lender} onUpdate={updateLender} />;
+            case 'portfolio':
+                return <PortfolioSection lender={lender} allLoans={allLoans} />;
             default:
                 return <div>Select a section</div>;
         }

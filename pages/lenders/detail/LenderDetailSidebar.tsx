@@ -1,7 +1,7 @@
 import React from 'react';
-import { BorrowerIcon, FundingIcon } from '../../../components/icons';
+import { BorrowerIcon, FundingIcon, CreditsIcon } from '../../../components/icons';
 
-export type Section = 'info' | 'trust_account';
+export type Section = 'info' | 'trust_account' | 'portfolio';
 
 interface LenderDetailSidebarProps {
     activeSection: Section;
@@ -33,6 +33,7 @@ const LenderDetailSidebar: React.FC<LenderDetailSidebarProps> = ({ activeSection
     const navItems = [
         { name: 'info' as Section, label: 'Lender Info', icon: BorrowerIcon },
         { name: 'trust_account' as Section, label: 'Trust Account', icon: FundingIcon },
+        { name: 'portfolio' as Section, label: 'Portfolio', icon: CreditsIcon },
     ];
 
     return (

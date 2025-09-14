@@ -3,6 +3,7 @@ import { Prospect, Funder } from '../../../prospects/types';
 import { useLenders } from '../../../lenders/useLenders';
 import AddLoanFunderModal from '../AddLoanFunderModal';
 import AddFundingEventModal from '../AddFundingEventModal';
+import EditFunderModal from '../EditFunderModal';
 import { AddIcon, DollarCircleIcon, EditIcon, TrashIcon, PaymentIcon } from '../../../../components/icons';
 import { formatCurrency, formatPercent } from '../../../../utils/formatters';
 
@@ -15,6 +16,7 @@ interface FundingSectionProps {
 const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecordPaymentClick }) => {
     const [isAddFunderModalOpen, setAddFunderModalOpen] = useState(false);
     const [isFundingEventModalOpen, setFundingEventModalOpen] = useState(false);
+    const [editingFunder, setEditingFunder] = useState<Funder | null>(null);
     const { lenders } = useLenders();
     
     const funders = loan.funders || [];
@@ -24,6 +26,12 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
     const handleAddFunder = (newFunder: Funder) => {
         const updatedFunders = [...funders, newFunder];
         onUpdate({ funders: updatedFunders });
+    };
+    
+    const handleUpdateFunder = (updatedFunder: Funder) => {
+        const updatedFunders = funders.map(f => f.id === updatedFunder.id ? updatedFunder : f);
+        onUpdate({ funders: updatedFunders });
+        setEditingFunder(null);
     };
 
     const handleDeleteFunder = (funderId: string) => {
@@ -106,13 +114,18 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {funders.map((funder) => (
-                                <tr key={funder.id}>
+                                <tr key={funder.id} onDoubleClick={() => setEditingFunder(funder)} className="hover:bg-gray-50 cursor-pointer">
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{funder.lender_name}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.pct_owned, 3)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.lender_rate, 3)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(funder.principal_balance)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        <button onClick={() => handleDeleteFunder(funder.id)} className="text-red-500 hover:text-red-700"><TrashIcon className="h-5 w-5" /></button>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 space-x-2">
+                                        <button onClick={() => setEditingFunder(funder)} className="text-blue-500 hover:text-blue-700" title="Edit Funder Servicing">
+                                            <EditIcon className="h-5 w-5" />
+                                        </button>
+                                        <button onClick={() => handleDeleteFunder(funder.id)} className="text-red-500 hover:text-red-700" title="Delete Funder">
+                                            <TrashIcon className="h-5 w-5" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -147,6 +160,14 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
                 onClose={() => setFundingEventModalOpen(false)}
                 onSave={handleSaveFundingEvent}
                 loan={loan}
+            />
+
+            <EditFunderModal
+                isOpen={!!editingFunder}
+                onClose={() => setEditingFunder(null)}
+                onSave={handleUpdateFunder}
+                funder={editingFunder}
+                lenders={lenders}
             />
 
         </div>
