@@ -26,6 +26,7 @@ export const formatNumber = (num: number | null | undefined): string => {
         return '';
     }
     return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(num);
 };
