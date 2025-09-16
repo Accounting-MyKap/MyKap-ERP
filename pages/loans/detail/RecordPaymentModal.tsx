@@ -66,9 +66,9 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
     };
 
     const totalDistributed = useMemo(() => {
-        // FIX: Ensure reduce operation performs numeric addition, not string concatenation,
-        // by explicitly converting each item to a number.
-        return Object.values(manualDistributions).reduce((sum: number, item) => sum + (Number(item) || 0), 0);
+        // FIX: Operator '+' cannot be applied to types 'string | number' and 'number'.
+        // Explicitly convert each item to a number before adding to the sum to resolve TypeScript's ambiguity.
+        return Object.values(manualDistributions).reduce((sum, item) => sum + Number(item || 0), 0);
     }, [manualDistributions]);
     
     const remainingToDistribute = paymentAmount - totalDistributed;
@@ -107,9 +107,7 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                 type="text"
                                 inputMode="decimal"
                                 id="amount"
-                                // FIX: The `amount` state can be `''`, which is not a valid parameter for `formatNumber`.
-                                // `|| undefined` safely converts an empty string to `undefined`, which the function handles.
-                                value={formatNumber(amount || undefined)}
+                                value={amount === '' ? '' : formatNumber(amount)}
                                 onChange={e => setAmount(parseCurrency(e.target.value) || '')}
                                 placeholder="0.00"
                                 max={principalBalance}
@@ -144,9 +142,7 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                             type="text"
                                             inputMode="decimal"
                                             id={`dist-${funder.id}`}
-                                            // FIX: Same fix as above for values from the distributions object.
-                                            // An empty string is not assignable to formatNumber's parameter type.
-                                            value={formatNumber(manualDistributions[funder.id] || undefined)}
+                                            value={typeof manualDistributions[funder.id] === 'number' ? formatNumber(manualDistributions[funder.id] as number) : ''}
                                             onChange={(e) => handleDistributionChange(funder.id, e.target.value)}
                                             className="input-field input-field-with-adornment-left text-right"
                                             placeholder="0.00"
