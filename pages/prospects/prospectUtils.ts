@@ -76,9 +76,9 @@ const getStageSpecificDocs = (stageName: string): Stage['documents'] => {
 
 
 export const generateNewProspect = (
-    prospectData: Omit<Prospect, 'id' | 'prospect_code' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>,
+    prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>,
     assignedUser: UserProfile
-): Omit<Prospect, 'id' | 'created_at' | 'prospect_code'> => {
+): Omit<Prospect, 'id' | 'created_at'> => {
     
     const initialStages: Stage[] = STAGE_NAMES.map((name, index) => {
         const stageId = index + 1;

@@ -158,7 +158,7 @@ export const useProspects = () => {
         setProspects(prev => prev.map(p => p.id === updatedProspect.id ? updatedProspect : p));
     }
 
-    const addProspect = async (prospectData: Omit<Prospect, 'id' | 'prospect_code' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
+    const addProspect = async (prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
         const assignedUser = users.find(u => u.id === prospectData.assigned_to);
         if (!assignedUser) return;
 
@@ -213,7 +213,7 @@ export const useProspects = () => {
 
         // FIX: Destructure out immutable/server-set fields before sending the update payload.
         // This prevents sending the entire object and ensures a clean update.
-        const { id, created_at, prospect_code, ...updatePayload } = updatedProspect;
+        const { id, created_at, ...updatePayload } = updatedProspect;
 
 
         const { data, error } = await supabase

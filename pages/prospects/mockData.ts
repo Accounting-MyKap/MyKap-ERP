@@ -8,6 +8,8 @@ export const MOCK_USERS: UserProfile[] = [
 
 const prospectBase1 = {
     borrower_name: 'Yireth Fonseca Mercado',
+    // FIX: Added prospect_code to satisfy the type required by generateNewProspect.
+    prospect_code: 'HKF-ML0003',
     email: 'yireth@example.com',
     phone_number: '305-111-2222',
     loan_amount: 350000,
@@ -18,12 +20,13 @@ const prospectBase1 = {
 // FIX: Cast the result of generateNewProspect to Prospect to allow adding properties.
 const prospect1 = generateNewProspect(prospectBase1, MOCK_USERS[0]) as Prospect;
 prospect1.id = 'prospect-1';
-prospect1.prospect_code = 'HKF-ML0003';
 prospect1.created_at = new Date('2025-08-28T10:00:00Z').toISOString();
 prospect1.status = 'in_progress';
 
 const prospectBase2 = {
     borrower_name: 'Jhon Escobar García',
+    // FIX: Added prospect_code to satisfy the type required by generateNewProspect.
+    prospect_code: 'HKF-ML0002',
     email: 'jhon@example.com',
     phone_number: '305-333-4444',
     loan_amount: 750000,
@@ -34,7 +37,6 @@ const prospectBase2 = {
 // FIX: Cast the result of generateNewProspect to Prospect to allow adding properties.
 const prospect2 = generateNewProspect(prospectBase2, MOCK_USERS[0]) as Prospect;
 prospect2.id = 'prospect-2';
-prospect2.prospect_code = 'HKF-ML0002';
 prospect2.created_at = new Date('2025-08-22T11:00:00Z').toISOString();
 prospect2.status = 'completed';
 prospect2.stages = prospect2.stages.map(s => ({...s, status: 'completed' as const}));
@@ -76,6 +78,8 @@ prospect2.co_borrowers = [
 
 const prospectBase3 = {
     borrower_name: 'Guillermo Andrés Carrasquilla Camargo',
+    // FIX: Added prospect_code to satisfy the type required by generateNewProspect.
+    prospect_code: 'HKF-ML0001',
     email: 'guillermo@example.com',
     phone_number: '305-555-6666',
     loan_amount: 1200000,
@@ -86,7 +90,6 @@ const prospectBase3 = {
 // FIX: Cast the result of generateNewProspect to Prospect to allow adding properties.
 const prospect3 = generateNewProspect(prospectBase3, MOCK_USERS[0]) as Prospect;
 prospect3.id = 'prospect-3';
-prospect3.prospect_code = 'HKF-ML0001';
 prospect3.created_at = new Date('2025-08-22T12:00:00Z').toISOString();
 prospect3.status = 'completed';
 prospect3.stages = prospect3.stages.map(s => ({...s, status: 'completed' as const}));
@@ -95,6 +98,8 @@ prospect3.terms = { original_amount: 1200000, note_rate: 0.085, principal_balanc
 
 const prospectBase4 = {
     borrower_name: 'Rejected Innovations LLC',
+    // FIX: Added prospect_code to satisfy the type required by generateNewProspect.
+    prospect_code: 'HKF-ML0004',
     email: 'rejected@example.com',
     phone_number: '305-777-8888',
     loan_amount: 150000,
@@ -105,7 +110,6 @@ const prospectBase4 = {
 // FIX: Cast the result of generateNewProspect to Prospect to allow adding properties.
 const prospect4 = generateNewProspect(prospectBase4, MOCK_USERS[1]) as Prospect;
 prospect4.id = 'prospect-4';
-prospect4.prospect_code = 'HKF-ML0004';
 prospect4.created_at = new Date('2025-07-15T09:00:00Z').toISOString();
 prospect4.status = 'rejected';
 prospect4.rejected_at_stage = 1;

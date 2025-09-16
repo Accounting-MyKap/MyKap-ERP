@@ -6,12 +6,13 @@ import { AddIcon } from '../../components/icons';
 interface CreateProspectModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAddProspect: (prospectData: Omit<Prospect, 'id' | 'prospect_code' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => void;
+    onAddProspect: (prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => void;
     users: UserProfile[];
 }
 
 const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClose, onAddProspect, users }) => {
     const [borrowerName, setBorrowerName] = useState('');
+    const [prospectCode, setProspectCode] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [loanAmount, setLoanAmount] = useState('');
@@ -22,13 +23,14 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!borrowerName || !assignedTo) {
-            setError('Borrower Name and Assigned To are required.');
+        if (!borrowerName || !assignedTo || !prospectCode) {
+            setError('Borrower Name, Account, and Assigned To are required.');
             return;
         }
         
         onAddProspect({
             borrower_name: borrowerName,
+            prospect_code: prospectCode,
             email,
             phone_number: phone,
             loan_amount: parseFloat(loanAmount) || 0,
@@ -39,6 +41,7 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
 
         // Reset form and close
         setBorrowerName('');
+        setProspectCode('');
         setEmail('');
         setPhone('');
         setLoanAmount('');
@@ -55,6 +58,10 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                 <div>
                     <label htmlFor="borrowerName" className="block text-sm font-medium text-gray-700">Borrower Name</label>
                     <input type="text" id="borrowerName" value={borrowerName} onChange={e => setBorrowerName(e.target.value)} className="input-field mt-1" placeholder="E.g., John Doe or Innovate Corp" required/>
+                </div>
+                <div>
+                    <label htmlFor="prospectCode" className="block text-sm font-medium text-gray-700">Account</label>
+                    <input type="text" id="prospectCode" value={prospectCode} onChange={e => setProspectCode(e.target.value)} className="input-field mt-1" placeholder="E.g., HKF-ML0035" required/>
                 </div>
                  <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
