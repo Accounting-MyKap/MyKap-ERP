@@ -10,21 +10,7 @@ interface EditFunderModalProps {
     lenders: Lender[];
 }
 
-const Tab: React.FC<{ label: string, isActive: boolean, onClick: () => void, disabled?: boolean }> = ({ label, isActive, onClick, disabled }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            isActive ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-        } ${disabled ? 'cursor-not-allowed text-gray-400' : ''}`}
-    >
-        {label}
-    </button>
-);
-
-const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSave, funder, lenders }) => {
-    const [activeTab, setActiveTab] = useState('servicing_fees');
+const EditFunderModal: React.FC<EditFunderModalProps> => ({ isOpen, onClose, onSave, funder, lenders }) => {
     const [formData, setFormData] = useState<Partial<ServicingFees & { broker_servicing_fee_percent_display: number | string }>>({});
 
     const lenderDetails = lenders.find(l => l.id === funder?.lender_id);
@@ -98,15 +84,8 @@ const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSa
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="border-b border-gray-200">
-                    <Tab label="Lender Rate" isActive={activeTab === 'lender_rate'} onClick={() => {}} disabled />
-                    <Tab label="Servicing Fees" isActive={activeTab === 'servicing_fees'} onClick={() => setActiveTab('servicing_fees')} />
-                    <Tab label="Disbursements" isActive={activeTab === 'disbursements'} onClick={() => {}} disabled />
-                </div>
-
                 {/* Servicing Fees Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 border-t pt-4">
                     {/* Broker Servicing Fee */}
                     <div className="space-y-3">
                         <div className="flex items-center">

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Property, Prospect } from '../../prospects/types';
-import { formatCurrency } from '../../../utils/formatters';
 
 interface PropertyModalProps {
     isOpen: boolean;
@@ -32,7 +31,7 @@ const getInitialState = (): Partial<Property> => ({
 });
 
 
-const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose, onSave, property, loan }) => {
+const PropertyModal: React.FC<PropertyModalProps> => ({ isOpen, onClose, onSave, property, loan }) => {
     const [formData, setFormData] = useState<Partial<Property>>(getInitialState());
 
     useEffect(() => {

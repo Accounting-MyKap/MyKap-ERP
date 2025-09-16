@@ -9,7 +9,7 @@ interface CoBorrowerModalProps {
     coBorrower: CoBorrower | null;
 }
 
-const CoBorrowerModal: React.FC<CoBorrowerModalProps> = ({ isOpen, onClose, onSave, coBorrower }) => {
+const CoBorrowerModal: React.FC<CoBorrowerModalProps> => ({ isOpen, onClose, onSave, coBorrower }) => {
     const [formData, setFormData] = useState<Partial<CoBorrower>>({});
 
     useEffect(() => {
@@ -49,31 +49,31 @@ const CoBorrowerModal: React.FC<CoBorrowerModalProps> = ({ isOpen, onClose, onSa
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={coBorrower ? 'Edit Co-Borrower' : 'New Co-Borrower / Other Parties'}>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Name & Salutation */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                     <div>
                         <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Full Name</label>
                         <input type="text" id="full_name" name="full_name" value={formData.full_name || ''} onChange={handleChange} className="input-field mt-1" required />
                     </div>
-                </div>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <div>
-                        <label htmlFor="salutation" className="block text-sm font-medium text-gray-700">Salutation</label>
-                        <input type="text" id="salutation" name="salutation" value={formData.salutation || ''} onChange={handleChange} className="input-field mt-1" />
-                    </div>
-                     <div>
-                        <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">First Name</label>
-                        <input type="text" id="first_name" name="first_name" value={formData.first_name || ''} onChange={handleChange} className="input-field mt-1" />
-                    </div>
-                     <div>
-                        <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Last Name</label>
-                        <input type="text" id="last_name" name="last_name" value={formData.last_name || ''} onChange={handleChange} className="input-field mt-1" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label htmlFor="salutation" className="block text-sm font-medium text-gray-700">Salutation</label>
+                            <input type="text" id="salutation" name="salutation" value={formData.salutation || ''} onChange={handleChange} className="input-field mt-1" />
+                        </div>
+                        <div>
+                            <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">First Name</label>
+                            <input type="text" id="first_name" name="first_name" value={formData.first_name || ''} onChange={handleChange} className="input-field mt-1" />
+                        </div>
+                        <div>
+                            <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" value={formData.last_name || ''} onChange={handleChange} className="input-field mt-1" />
+                        </div>
                     </div>
                 </div>
 
                 {/* Mailing Address */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-1">Mailing Address</h4>
                      <div>
                         <label htmlFor="street" className="block text-sm font-medium text-gray-700">Street</label>
@@ -96,9 +96,9 @@ const CoBorrowerModal: React.FC<CoBorrowerModalProps> = ({ isOpen, onClose, onSa
                 </div>
 
                  {/* Phone Numbers */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-1">Phone Numbers</h4>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label htmlFor="home" className="block text-sm font-medium text-gray-700">Home</label>
                             <input type="tel" id="home" name="home" value={formData.phone_numbers?.home || ''} onChange={handlePhoneChange} className="input-field mt-1" />
@@ -115,7 +115,7 @@ const CoBorrowerModal: React.FC<CoBorrowerModalProps> = ({ isOpen, onClose, onSa
                 </div>
                 
                 {/* Email */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                      <h4 className="text-md font-semibold text-gray-700 border-b pb-1">E-mail & Delivery Options</h4>
                      <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
