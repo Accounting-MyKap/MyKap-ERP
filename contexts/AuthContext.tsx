@@ -75,48 +75,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Starting initial session check...');
+    setLoading(true);
+    console.log('Setting up real-time auth state listener...');
 
-    // 1. Perform initial session check on component mount to determine the initial state.
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-        console.log('Initial session fetched:', initialSession ? 'Exists' : 'None');
-        setSession(initialSession);
-        const currentUser = initialSession?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-            const userProfile = await fetchProfile(currentUser);
-            setProfile(userProfile);
-        }
-
-        // 2. Mark initial loading as complete. This happens only once.
-        setLoading(false);
-        console.log('Initial loading complete. Setting up real-time auth state listener...');
-
-        // 3. Set up the listener for REAL-TIME auth changes (e.g., login, logout).
-        //    This listener will NOT touch the `loading` state again.
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-            console.log(`%c[Auth State Change] Event: ${_event}`, 'color: #007bff; font-weight: bold;', { session: newSession });
-            
-            setSession(newSession);
-            const newCurrentUser = newSession?.user ?? null;
-            setUser(newCurrentUser);
-
-            if (newCurrentUser) {
-                const userProfile = await fetchProfile(newCurrentUser);
-                setProfile(userProfile);
-            } else {
-                setProfile(null);
-            }
-        });
+    // Rely solely on onAuthStateChange. It fires immediately with the current session state
+    // and then listens for any future changes. This avoids race conditions with getSession().
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        console.log(`%c[Auth State Change] Event: ${_event}`, 'color: #007bff; font-weight: bold;', { session: newSession });
         
-        // 4. Return the cleanup function for the listener.
-        return () => {
-            if (subscription) {
-                console.log('Unsubscribing from onAuthStateChange listener.');
-                subscription.unsubscribe();
-            }
-        };
+        setSession(newSession);
+        const newCurrentUser = newSession?.user ?? null;
+        setUser(newCurrentUser);
+
+        if (newCurrentUser) {
+            const userProfile = await fetchProfile(newCurrentUser);
+            setProfile(userProfile);
+        } else {
+            setProfile(null);
+        }
+        
+        // The first time this runs, it will set loading to false.
+        setLoading(false);
     });
+    
+    // Cleanup the listener when the component unmounts.
+    return () => {
+        if (subscription) {
+            console.log('Unsubscribing from onAuthStateChange listener.');
+            subscription.unsubscribe();
+        }
+    };
   }, []); // Empty dependency array ensures this runs only once on mount.
 
 
