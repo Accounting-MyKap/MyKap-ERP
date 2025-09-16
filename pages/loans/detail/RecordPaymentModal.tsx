@@ -66,9 +66,9 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
     };
 
     const totalDistributed = useMemo(() => {
-        // FIX: Operator '+' cannot be applied to types 'string | number' and 'number'.
-        // Explicitly convert each item to a number before adding to the sum to resolve TypeScript's ambiguity.
-        return Object.values(manualDistributions).reduce((sum, item) => sum + Number(item || 0), 0);
+        // FIX: The original reduce operation could result in string concatenation if an item was an
+        // empty string. Using Number() ensures all items are treated as numbers for a correct sum.
+        return Object.values(manualDistributions).reduce((sum, item) => sum + (Number(item) || 0), 0);
     }, [manualDistributions]);
     
     const remainingToDistribute = paymentAmount - totalDistributed;
@@ -107,7 +107,7 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                 type="text"
                                 inputMode="decimal"
                                 id="amount"
-                                value={amount === '' ? '' : formatNumber(amount)}
+                                value={formatNumber(amount === '' ? undefined : amount)}
                                 onChange={e => setAmount(parseCurrency(e.target.value) || '')}
                                 placeholder="0.00"
                                 max={principalBalance}
@@ -142,7 +142,8 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                             type="text"
                                             inputMode="decimal"
                                             id={`dist-${funder.id}`}
-                                            value={typeof manualDistributions[funder.id] === 'number' ? formatNumber(manualDistributions[funder.id] as number) : ''}
+                                            // FIX: Simplified value prop to correctly handle `number | ''` type and prevent type errors with `formatNumber`.
+                                            value={formatNumber(manualDistributions[funder.id] || undefined)}
                                             onChange={(e) => handleDistributionChange(funder.id, e.target.value)}
                                             className="input-field input-field-with-adornment-left text-right"
                                             placeholder="0.00"
