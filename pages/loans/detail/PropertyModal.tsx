@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Property, Prospect } from '../../prospects/types';
+import { formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface PropertyModalProps {
     isOpen: boolean;
@@ -47,8 +48,13 @@ const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose, onSave, 
             const { checked } = e.target as HTMLInputElement;
              setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
-            const parsedValue = type === 'number' && value !== '' ? parseFloat(value) : value;
-            setFormData(prev => ({ ...prev, [name]: parsedValue }));
+             if (['purchase_price', 'appraisal_value', 'pledged_equity'].includes(name)) {
+                const parsedValue = parseCurrency(value);
+                setFormData(prev => ({ ...prev, [name]: parsedValue === 0 ? undefined : parsedValue }));
+            } else {
+                const parsedValue = type === 'number' && value !== '' ? parseFloat(value) : value;
+                setFormData(prev => ({ ...prev, [name]: parsedValue }));
+            }
         }
     };
     
@@ -160,7 +166,7 @@ const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose, onSave, 
                                 <label htmlFor="purchase_price" className="block text-sm font-medium text-gray-700">Purchase Price</label>
                                 <div className="input-container mt-1">
                                     <span className="input-adornment">$</span>
-                                    <input type="number" id="purchase_price" name="purchase_price" value={formData.purchase_price || ''} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                                    <input type="text" inputMode="decimal" id="purchase_price" name="purchase_price" value={formatNumber(formData.purchase_price)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                                 </div>
                             </div>
                         </div>
@@ -168,7 +174,7 @@ const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose, onSave, 
                             <label htmlFor="appraisal_value" className="block text-sm font-medium text-gray-700">Appraised Value</label>
                             <div className="input-container mt-1">
                                 <span className="input-adornment">$</span>
-                                <input type="number" id="appraisal_value" name="appraisal_value" value={formData.appraisal_value || ''} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                                <input type="text" inputMode="decimal" id="appraisal_value" name="appraisal_value" value={formatNumber(formData.appraisal_value)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -190,7 +196,7 @@ const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose, onSave, 
                                 <label htmlFor="pledged_equity" className="block text-sm font-medium text-gray-700">Pledged Equity</label>
                                 <div className="input-container mt-1">
                                     <span className="input-adornment">$</span>
-                                    <input type="number" id="pledged_equity" name="pledged_equity" value={formData.pledged_equity || ''} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                                    <input type="text" inputMode="decimal" id="pledged_equity" name="pledged_equity" value={formatNumber(formData.pledged_equity)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                                 </div>
                             </div>
                         </div>

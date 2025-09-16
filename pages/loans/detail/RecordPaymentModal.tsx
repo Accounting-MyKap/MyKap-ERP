@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Prospect } from '../../prospects/types';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrency, formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface PaymentData {
     date: string;
@@ -19,12 +19,11 @@ interface RecordPaymentModalProps {
 
 const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose, onSave, loan }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [amount, setAmount] = useState<number | string>('');
+    const [amount, setAmount] = useState<number | ''>('');
     const [notes, setNotes] = useState('');
-    // Fix: Changed state to consistently store distribution amounts as strings to prevent type errors.
-    const [manualDistributions, setManualDistributions] = useState<{ [funderId: string]: string }>({});
+    const [manualDistributions, setManualDistributions] = useState<{ [funderId: string]: number | '' }>({});
 
-    const paymentAmount = typeof amount === 'number' ? amount : 0;
+    const paymentAmount = amount || 0;
     const principalBalance = loan.terms?.principal_balance || 0;
 
     useEffect(() => {
@@ -38,13 +37,20 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
     }, [isOpen]);
     
     useEffect(() => {
-        // Fix: Ensure auto-populated distributions are stored as strings with fixed decimal places
-        // to maintain consistent state typing.
-        // Auto-populate distributions when payment amount changes
-        const proportionalDistributions: { [funderId: string]: string } = {};
+        // Auto-populate distributions when payment amount changes, handling rounding
+        const proportionalDistributions: { [funderId: string]: number | '' } = {};
         if (loan.funders && paymentAmount > 0) {
-            loan.funders.forEach(funder => {
-                proportionalDistributions[funder.id] = (paymentAmount * funder.pct_owned).toFixed(2);
+            let distributedSum = 0;
+            const fundersCount = loan.funders.length;
+            loan.funders.forEach((funder, index) => {
+                if (index === fundersCount - 1) { // last funder gets the remainder
+                    const remainder = paymentAmount - distributedSum;
+                    proportionalDistributions[funder.id] = remainder;
+                } else {
+                    const dist = parseFloat((paymentAmount * funder.pct_owned).toFixed(2));
+                    proportionalDistributions[funder.id] = dist;
+                    distributedSum += dist;
+                }
             });
         }
         setManualDistributions(proportionalDistributions);
@@ -52,15 +58,16 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
 
 
     const handleDistributionChange = (funderId: string, value: string) => {
+        const parsed = parseCurrency(value);
         setManualDistributions(prev => ({
             ...prev,
-            [funderId]: value,
+            [funderId]: parsed === 0 ? '' : parsed,
         }));
     };
 
     const totalDistributed = useMemo(() => {
-        // Fix: Simplified reduce function now that `item` is consistently a string. This resolves the original TypeScript error.
-        return Object.values(manualDistributions).reduce((sum, item) => sum + (parseFloat(item) || 0), 0);
+        // FIX: Explicitly type the accumulator 'sum' as a number to resolve type ambiguity with the '+' operator.
+        return Object.values(manualDistributions).reduce((sum: number, item) => sum + (Number(item) || 0), 0);
     }, [manualDistributions]);
     
     const remainingToDistribute = paymentAmount - totalDistributed;
@@ -77,8 +84,7 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
             distributions: Object.entries(manualDistributions).map(([funderId, distAmount]) => ({
                 funderId,
                 lender_id: loan.funders?.find(f => f.id === funderId)?.lender_id || '',
-                // Fix: Explicitly parse the string amount back to a number before saving.
-                amount: parseFloat(distAmount) || 0,
+                amount: Number(distAmount) || 0,
             })),
         });
     };
@@ -97,13 +103,15 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
                             <input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 id="amount"
-                                value={amount}
-                                onChange={e => setAmount(parseFloat(e.target.value) || '')}
+                                // FIX: Pass `amount` through `formatNumber` safely by converting an empty string to undefined, which the function handles.
+                                value={formatNumber(amount || undefined)}
+                                onChange={e => setAmount(parseCurrency(e.target.value) || '')}
                                 placeholder="0.00"
                                 max={principalBalance}
-                                className="input-field input-field-with-adornment-left"
+                                className="input-field input-field-with-adornment-left text-right"
                             />
                         </div>
                         <p className="text-xs text-gray-500 mt-1">Current Principal Balance: {formatCurrency(principalBalance)}</p>
@@ -131,9 +139,10 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                     <div className="input-container">
                                         <span className="input-adornment">$</span>
                                         <input
-                                            type="number"
+                                            type="text"
+                                            inputMode="decimal"
                                             id={`dist-${funder.id}`}
-                                            value={manualDistributions[funder.id] || ''}
+                                            value={formatNumber(manualDistributions[funder.id] || undefined)}
                                             onChange={(e) => handleDistributionChange(funder.id, e.target.value)}
                                             className="input-field input-field-with-adornment-left text-right"
                                             placeholder="0.00"

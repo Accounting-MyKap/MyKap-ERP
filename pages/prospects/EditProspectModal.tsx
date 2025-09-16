@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import { UserProfile, Prospect } from './types';
+import { formatNumber, parseCurrency } from '../../utils/formatters';
 
 interface EditProspectModalProps {
     isOpen: boolean;
@@ -15,7 +16,7 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
         borrower_name: '',
         email: '',
         phone_number: '',
-        loan_amount: '',
+        loan_amount: '' as number | '',
         borrower_type: 'individual' as Prospect['borrower_type'],
         loan_type: 'purchase' as Prospect['loan_type'],
         assigned_to: '',
@@ -28,7 +29,7 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
                 borrower_name: prospect.borrower_name || '',
                 email: prospect.email || '',
                 phone_number: prospect.phone_number || '',
-                loan_amount: prospect.loan_amount?.toString() || '',
+                loan_amount: prospect.loan_amount || '',
                 borrower_type: prospect.borrower_type || 'individual',
                 loan_type: prospect.loan_type || 'purchase',
                 assigned_to: prospect.assigned_to || '',
@@ -38,7 +39,12 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'loan_amount') {
+            const parsed = parseCurrency(value);
+            setFormData(prev => ({ ...prev, loan_amount: parsed === 0 ? '' : parsed }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,7 +64,7 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
             borrower_name: formData.borrower_name,
             email: formData.email,
             phone_number: formData.phone_number,
-            loan_amount: parseFloat(formData.loan_amount) || 0,
+            loan_amount: Number(formData.loan_amount) || 0,
             borrower_type: formData.borrower_type,
             loan_type: formData.loan_type,
             assigned_to: formData.assigned_to,
@@ -87,7 +93,14 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ isOpen, onClose, 
                     <label htmlFor="loan_amount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
                     <div className="input-container mt-1">
                         <span className="input-adornment">$</span>
-                        <input type="number" name="loan_amount" id="loan_amount" value={formData.loan_amount} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            name="loan_amount"
+                            id="loan_amount"
+                            value={formData.loan_amount === '' ? '' : formatNumber(formData.loan_amount)}
+                            onChange={handleChange}
+                            className="input-field input-field-with-adornment-left text-right" />
                     </div>
                 </div>
                 

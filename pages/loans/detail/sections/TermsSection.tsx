@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Prospect, LoanTerms } from '../../../prospects/types';
+import { formatNumber, parseCurrency } from '../../../../utils/formatters';
 
 interface TermsSectionProps {
     loan: Prospect;
@@ -7,7 +8,7 @@ interface TermsSectionProps {
 }
 
 const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
-    const [terms, setTerms] = useState<Partial<LoanTerms>>({});
+    const [terms, setTerms] = useState<Partial<LoanTerms & { note_rate: number | '' }>>({});
 
      useEffect(() => {
         if (loan.terms) {
@@ -22,16 +23,21 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
     }, [loan]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type } = e.target;
-        const parsedValue = type === 'number' ? parseFloat(value) || 0 : value;
-        setTerms(prev => ({ ...prev, [name]: parsedValue }));
+        const { name, value } = e.target;
+        if (['original_amount', 'principal_balance', 'trust_balance'].includes(name)) {
+            const parsedValue = parseCurrency(value);
+            setTerms(prev => ({ ...prev, [name]: parsedValue === 0 ? undefined : parsedValue }));
+        } else {
+            const parsedValue = value === '' ? '' : parseFloat(value) || 0;
+            setTerms(prev => ({ ...prev, [name]: parsedValue }));
+        }
     };
 
     const handleSave = () => {
         const termsToSave: Partial<LoanTerms> = {
             ...terms,
             // Convert percentage from input back to decimal for saving
-            note_rate: (terms.note_rate || 0) / 100,
+            note_rate: (Number(terms.note_rate) || 0) / 100,
         };
         onUpdate({ terms: termsToSave as LoanTerms });
     };
@@ -47,13 +53,13 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                         <label htmlFor="original_amount" className="block text-sm font-medium text-gray-700">Original Amount</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="number" id="original_amount" name="original_amount" value={terms.original_amount || ''} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                            <input type="text" inputMode="decimal" id="original_amount" name="original_amount" value={formatNumber(terms.original_amount)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                     <div>
                         <label htmlFor="note_rate" className="block text-sm font-medium text-gray-700">Note Rate</label>
                          <div className="input-container mt-1">
-                            <input type="number" id="note_rate" name="note_rate" value={terms.note_rate || ''} onChange={handleChange} className="input-field input-field-with-adornment-right" />
+                            <input type="number" id="note_rate" name="note_rate" value={terms.note_rate || ''} onChange={handleChange} className="input-field input-field-with-adornment-right text-right" />
                             <span className="input-adornment-right">%</span>
                         </div>
                     </div>
@@ -65,14 +71,14 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                         <label htmlFor="principal_balance" className="block text-sm font-medium text-gray-700">Principal Balance</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="number" id="principal_balance" name="principal_balance" value={terms.principal_balance || ''} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                            <input type="text" inputMode="decimal" id="principal_balance" name="principal_balance" value={formatNumber(terms.principal_balance)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                      <div>
                         <label htmlFor="trust_balance" className="block text-sm font-medium text-gray-700">Trust Balance</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="number" id="trust_balance" name="trust_balance" value={terms.trust_balance || ''} onChange={handleChange} className="input-field input-field-with-adornment-left" />
+                            <input type="text" inputMode="decimal" id="trust_balance" name="trust_balance" value={formatNumber(terms.trust_balance)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import { UserProfile, Prospect } from './types';
 import { AddIcon } from '../../components/icons';
+import { formatNumber, parseCurrency } from '../../utils/formatters';
 
 interface CreateProspectModalProps {
     isOpen: boolean;
@@ -15,7 +16,7 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
     const [prospectCode, setProspectCode] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
-    const [loanAmount, setLoanAmount] = useState('');
+    const [loanAmount, setLoanAmount] = useState<number | ''>('');
     const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
     const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
     const [assignedTo, setAssignedTo] = useState('');
@@ -33,7 +34,7 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
             prospect_code: prospectCode,
             email,
             phone_number: phone,
-            loan_amount: parseFloat(loanAmount) || 0,
+            loan_amount: loanAmount || 0,
             borrower_type: borrowerType,
             loan_type: loanType,
             assigned_to: assignedTo,
@@ -75,7 +76,17 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                     <label htmlFor="loanAmount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
                     <div className="input-container mt-1">
                         <span className="input-adornment">$</span>
-                        <input type="number" id="loanAmount" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} className="input-field input-field-with-adornment-left" placeholder="E.g., 250000" />
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            id="loanAmount"
+                            value={loanAmount === '' ? '' : formatNumber(loanAmount)}
+                            onChange={e => {
+                                const parsed = parseCurrency(e.target.value);
+                                setLoanAmount(parsed === 0 ? '' : parsed);
+                            }}
+                            className="input-field input-field-with-adornment-left text-right"
+                            placeholder="250,000" />
                     </div>
                 </div>
                 

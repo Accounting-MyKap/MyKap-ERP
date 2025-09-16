@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Prospect, Funder } from '../../prospects/types';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrency, formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface FundingEventData {
     fundingDate: string;
@@ -26,10 +26,11 @@ const AddFundingEventModal: React.FC<AddFundingEventModalProps> = ({ isOpen, onC
     
     const funders = loan.funders || [];
 
-    const handleDistributionChange = (funderId: string, amount: number) => {
+    const handleDistributionChange = (funderId: string, value: string) => {
+        const parsed = parseCurrency(value);
         setDistributions(prev => ({
             ...prev,
-            [funderId]: amount
+            [funderId]: parsed
         }));
     };
 
@@ -71,7 +72,13 @@ const AddFundingEventModal: React.FC<AddFundingEventModalProps> = ({ isOpen, onC
                 <label htmlFor="fundingAmount" className="block text-sm font-medium text-gray-700">Funding Amount</label>
                 <div className="input-container mt-1">
                     <span className="input-adornment">$</span>
-                    <input type="number" id="fundingAmount" value={fundingAmount} onChange={e => setFundingAmount(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-left" />
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        id="fundingAmount"
+                        value={formatNumber(fundingAmount)}
+                        onChange={e => setFundingAmount(parseCurrency(e.target.value))}
+                        className="input-field input-field-with-adornment-left text-right" />
                 </div>
             </div>
             <div className="pt-4 flex justify-end space-x-3">
@@ -91,10 +98,11 @@ const AddFundingEventModal: React.FC<AddFundingEventModalProps> = ({ isOpen, onC
                         <div className="input-container">
                             <span className="input-adornment">$</span>
                             <input
-                                type="number"
+                                type="text"
+                                inputMode="decimal"
                                 id={`dist-${funder.id}`}
-                                value={distributions[funder.id] || ''}
-                                onChange={e => handleDistributionChange(funder.id, parseFloat(e.target.value) || 0)}
+                                value={formatNumber(distributions[funder.id])}
+                                onChange={e => handleDistributionChange(funder.id, e.target.value)}
                                 className="input-field input-field-with-adornment-left text-right"
                                 placeholder="0.00"
                             />

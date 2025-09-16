@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { TrustAccountEvent } from '../../prospects/types';
+import { formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface AddDepositModalProps {
     isOpen: boolean;
@@ -53,7 +54,14 @@ const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSa
                     <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Amount</label>
                     <div className="input-container mt-1">
                         <span className="input-adornment">$</span>
-                        <input type="number" id="amount" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-left" required />
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            id="amount"
+                            value={formatNumber(amount)}
+                            onChange={e => setAmount(parseCurrency(e.target.value))}
+                            className="input-field input-field-with-adornment-left text-right"
+                            required />
                     </div>
                 </div>
 

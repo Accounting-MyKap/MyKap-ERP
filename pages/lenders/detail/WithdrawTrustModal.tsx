@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { TrustAccountEvent } from '../../prospects/types';
-import { formatCurrency } from '../../../utils/formatters';
+import { formatCurrency, formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface WithdrawTrustModalProps {
     isOpen: boolean;
@@ -13,7 +13,7 @@ interface WithdrawTrustModalProps {
 const WithdrawTrustModal: React.FC<WithdrawTrustModalProps> = ({ isOpen, onClose, onSave, currentBalance }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState<number | string>('');
+    const [amount, setAmount] = useState<number | ''>('');
 
     useEffect(() => {
         if (!isOpen) {
@@ -23,7 +23,7 @@ const WithdrawTrustModal: React.FC<WithdrawTrustModalProps> = ({ isOpen, onClose
         }
     }, [isOpen]);
     
-    const withdrawalAmount = typeof amount === 'number' ? amount : 0;
+    const withdrawalAmount = Number(amount) || 0;
     const isAmountValid = withdrawalAmount > 0 && withdrawalAmount <= currentBalance;
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -54,13 +54,13 @@ const WithdrawTrustModal: React.FC<WithdrawTrustModalProps> = ({ isOpen, onClose
                     <div className="input-container mt-1">
                         <span className="input-adornment">$</span>
                         <input
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             id="w-amount"
-                            value={amount}
-                            onChange={e => setAmount(parseFloat(e.target.value) || '')}
-                            className="input-field input-field-with-adornment-left"
+                            value={amount === '' ? '' : formatNumber(amount)}
+                            onChange={e => setAmount(parseCurrency(e.target.value) || '')}
+                            className="input-field input-field-with-adornment-left text-right"
                             required
-                            max={currentBalance}
                         />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Available Trust Balance: {formatCurrency(currentBalance)}</p>

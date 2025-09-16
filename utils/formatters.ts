@@ -20,3 +20,25 @@ export const formatPercent = (rate: number | null | undefined, fractionDigits: n
         maximumFractionDigits: fractionDigits,
     }).format(rate);
 };
+
+export const formatNumber = (num: number | null | undefined): string => {
+    if (num === null || num === undefined || isNaN(num)) {
+        return '';
+    }
+    return new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 2,
+    }).format(num);
+};
+
+export const parseCurrency = (value: string | number): number => {
+    if (typeof value === 'number') {
+        return value;
+    }
+    if (typeof value === 'string') {
+        // Remove everything that is not a digit or a decimal point.
+        const numericString = value.replace(/[^0-9.]/g, '');
+        const number = parseFloat(numericString);
+        return isNaN(number) ? 0 : number;
+    }
+    return 0;
+};

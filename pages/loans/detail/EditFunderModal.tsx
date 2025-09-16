@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Funder, Lender, ServicingFees } from '../../prospects/types';
+import { formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface EditFunderModalProps {
     isOpen: boolean;
@@ -29,8 +30,14 @@ const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSa
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
-        const val = type === 'checkbox' ? checked : value;
-        setFormData(prev => ({ ...prev, [name]: val }));
+        
+        if (['broker_servicing_fee_plus_amount', 'broker_servicing_fee_minimum'].includes(name)) {
+            const parsed = parseCurrency(value);
+            setFormData(prev => ({ ...prev, [name]: parsed }));
+        } else {
+            const val = type === 'checkbox' ? checked : value;
+            setFormData(prev => ({ ...prev, [name]: val }));
+        }
     };
 
     const handleSubmit = () => {
@@ -103,14 +110,14 @@ const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSa
                             <label htmlFor="broker_servicing_fee_plus_amount" className="block text-sm font-medium text-gray-700 mb-1">Plus Amount</label>
                             <div className="input-container">
                                 <span className="input-adornment">$</span>
-                                <input type="number" name="broker_servicing_fee_plus_amount" id="broker_servicing_fee_plus_amount" value={formData.broker_servicing_fee_plus_amount || ''} onChange={handleChange} className="input-field pl-7 text-right" />
+                                <input type="text" inputMode="decimal" name="broker_servicing_fee_plus_amount" id="broker_servicing_fee_plus_amount" value={formatNumber(formData.broker_servicing_fee_plus_amount)} onChange={handleChange} className="input-field pl-7 text-right" />
                             </div>
                         </div>
                         <div>
                             <label htmlFor="broker_servicing_fee_minimum" className="block text-sm font-medium text-gray-700 mb-1">Or Minimum</label>
                             <div className="input-container">
                                 <span className="input-adornment">$</span>
-                                <input type="number" name="broker_servicing_fee_minimum" id="broker_servicing_fee_minimum" value={formData.broker_servicing_fee_minimum || ''} onChange={handleChange} className="input-field pl-7 text-right" />
+                                <input type="text" inputMode="decimal" name="broker_servicing_fee_minimum" id="broker_servicing_fee_minimum" value={formatNumber(formData.broker_servicing_fee_minimum)} onChange={handleChange} className="input-field pl-7 text-right" />
                             </div>
                         </div>
                     </div>
