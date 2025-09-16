@@ -66,7 +66,8 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
     };
 
     const totalDistributed = useMemo(() => {
-        // FIX: Explicitly type the accumulator 'sum' as a number to resolve type ambiguity with the '+' operator.
+        // FIX: Ensure reduce operation performs numeric addition, not string concatenation,
+        // by explicitly converting each item to a number.
         return Object.values(manualDistributions).reduce((sum: number, item) => sum + (Number(item) || 0), 0);
     }, [manualDistributions]);
     
@@ -106,7 +107,8 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                 type="text"
                                 inputMode="decimal"
                                 id="amount"
-                                // FIX: Pass `amount` through `formatNumber` safely by converting an empty string to undefined, which the function handles.
+                                // FIX: The `amount` state can be `''`, which is not a valid parameter for `formatNumber`.
+                                // `|| undefined` safely converts an empty string to `undefined`, which the function handles.
                                 value={formatNumber(amount || undefined)}
                                 onChange={e => setAmount(parseCurrency(e.target.value) || '')}
                                 placeholder="0.00"
@@ -142,6 +144,8 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                             type="text"
                                             inputMode="decimal"
                                             id={`dist-${funder.id}`}
+                                            // FIX: Same fix as above for values from the distributions object.
+                                            // An empty string is not assignable to formatNumber's parameter type.
                                             value={formatNumber(manualDistributions[funder.id] || undefined)}
                                             onChange={(e) => handleDistributionChange(funder.id, e.target.value)}
                                             className="input-field input-field-with-adornment-left text-right"
