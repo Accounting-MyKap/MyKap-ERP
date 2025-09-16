@@ -121,8 +121,8 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
                             {funders.map((funder) => (
                                 <tr key={funder.id} onDoubleClick={() => setEditingFunder(funder)} className="hover:bg-gray-50 cursor-pointer">
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{funder.lender_name}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.pct_owned, 3)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.lender_rate, 3)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.pct_owned)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatPercent(funder.lender_rate)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(funder.principal_balance)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 space-x-2">
                                         <button onClick={() => setEditingFunder(funder)} className="text-blue-500 hover:text-blue-700" title="Edit Funder Servicing">
@@ -138,7 +138,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
                          <tfoot className="bg-gray-50">
                             <tr>
                                 <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">Total</td>
-                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatPercent(funders.reduce((acc, f) => acc + f.pct_owned, 0), 3)}</td>
+                                <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatPercent(funders.reduce((acc, f) => acc + f.pct_owned, 0))}</td>
                                 <td></td>
                                 <td className="px-4 py-3 text-left text-sm font-bold text-gray-800">{formatCurrency(funders.reduce((acc, f) => acc + f.principal_balance, 0))}</td>
                                 <td></td>
