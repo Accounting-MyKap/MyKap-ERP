@@ -31,7 +31,7 @@ const getInitialState = (): Partial<Property> => ({
 });
 
 
-const PropertyModal: React.FC<PropertyModalProps> => ({ isOpen, onClose, onSave, property, loan }) => {
+const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose, onSave, property, loan }) => {
     const [formData, setFormData] = useState<Partial<Property>>(getInitialState());
 
     useEffect(() => {

@@ -10,7 +10,7 @@ interface EditFunderModalProps {
     lenders: Lender[];
 }
 
-const EditFunderModal: React.FC<EditFunderModalProps> => ({ isOpen, onClose, onSave, funder, lenders }) => {
+const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSave, funder, lenders }) => {
     const [formData, setFormData] = useState<Partial<ServicingFees & { broker_servicing_fee_percent_display: number | string }>>({});
 
     const lenderDetails = lenders.find(l => l.id === funder?.lender_id);

@@ -9,7 +9,7 @@ interface CoBorrowerModalProps {
     coBorrower: CoBorrower | null;
 }
 
-const CoBorrowerModal: React.FC<CoBorrowerModalProps> => ({ isOpen, onClose, onSave, coBorrower }) => {
+const CoBorrowerModal: React.FC<CoBorrowerModalProps> = ({ isOpen, onClose, onSave, coBorrower }) => {
     const [formData, setFormData] = useState<Partial<CoBorrower>>({});
 
     useEffect(() => {
