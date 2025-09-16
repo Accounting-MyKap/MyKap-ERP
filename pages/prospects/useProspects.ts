@@ -1,6 +1,6 @@
 // hooks/useProspects.ts
 import { useState, useEffect, useCallback } from 'react';
-import { Prospect, UserProfile, DocumentStatus, ApplicantType, Stage, Document, ClosingDocStatusKey, Funder, HistoryEvent } from './types';
+import { Prospect, UserProfile, DocumentStatus, ApplicantType, Stage, Document, ClosingDocStatusKey, Funder, HistoryEvent, PropertyPhoto } from './types';
 import { supabase } from '../../services/supabase';
 import { generateNewProspect } from './prospectUtils';
 
@@ -394,10 +394,60 @@ export const useProspects = () => {
             };
         });
     };
+
+    const uploadPropertyPhoto = async (prospectId: string, propertyId: string, file: File): Promise<void> => {
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) throw new Error("Prospect not found");
+
+        const prospectFolder = (prospect.prospect_code || prospect.id).replace(/\s+/g, '_');
+        const filePath = `${prospectFolder}/properties/${propertyId}/${crypto.randomUUID()}-${file.name}`;
+
+        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
+        if (uploadError) {
+            console.error("Error uploading photo:", uploadError);
+            throw uploadError;
+        }
+
+        const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath);
+        const newPhoto: PropertyPhoto = {
+            id: crypto.randomUUID(),
+            url: urlData.publicUrl,
+            storage_path: filePath,
+        };
+
+        handleProspectUpdate(prospectId, p => {
+            const updatedProperties = p.properties?.map(prop => {
+                if (prop.id === propertyId) {
+                    return { ...prop, photos: [...(prop.photos || []), newPhoto] };
+                }
+                return prop;
+            });
+            return { ...p, properties: updatedProperties };
+        });
+    };
+
+    const deletePropertyPhoto = async (prospectId: string, propertyId: string, photo: PropertyPhoto): Promise<void> => {
+        const { error: deleteError } = await supabase.storage.from('documents').remove([photo.storage_path]);
+        if (deleteError) {
+            console.error("Error deleting photo:", deleteError);
+            throw deleteError;
+        }
+
+        handleProspectUpdate(prospectId, p => {
+            const updatedProperties = p.properties?.map(prop => {
+                if (prop.id === propertyId) {
+                    return { ...prop, photos: (prop.photos || []).filter(ph => ph.id !== photo.id) };
+                }
+                return prop;
+            });
+            return { ...p, properties: updatedProperties };
+        });
+    };
     
     return { 
         prospects, users, loading, addProspect, updateProspect, updateDocumentStatus, 
         updateClosingDocumentStatus, addDocument, deleteDocument, uploadDocument, 
-        removeDocumentLink, reopenProspect, rejectProspect, recordLoanPayment 
+        removeDocumentLink, reopenProspect, rejectProspect, recordLoanPayment,
+        uploadPropertyPhoto, deletePropertyPhoto
     };
 };

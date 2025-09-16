@@ -94,6 +94,13 @@ export interface HistoryEvent {
     distributions?: { funderId: string; amount: number }[];
 }
 
+export interface PropertyPhoto {
+    id: string;
+    url: string;
+    storage_path: string;
+}
+
+
 export interface Property {
     id: string;
     is_primary: boolean;
@@ -112,6 +119,7 @@ export interface Property {
     priority?: string;
     flood_zone?: string;
     zoning?: string;
+    photos?: PropertyPhoto[];
 }
 
 export interface CoBorrower {

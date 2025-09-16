@@ -18,7 +18,7 @@ import RecordPaymentModal from './detail/RecordPaymentModal';
 const LoanDetailPage: React.FC = () => {
     const { loanId } = useParams<{ loanId: string }>();
     const navigate = useNavigate();
-    const { prospects, loading, updateProspect, recordLoanPayment } = useProspects();
+    const { prospects, loading, updateProspect, recordLoanPayment, uploadPropertyPhoto, deletePropertyPhoto } = useProspects();
     const { addFundsToLenderTrust, withdrawFromLenderTrust } = useLenders();
     const [loan, setLoan] = useState<Prospect | null>(null);
     const [activeSection, setActiveSection] = useState<Section>('borrower');
@@ -184,7 +184,12 @@ const LoanDetailPage: React.FC = () => {
             case 'funding':
                 return <FundingSection loan={loan} onUpdate={handleUpdateLoan} onRecordPaymentClick={() => setPaymentModalOpen(true)} />;
             case 'properties':
-                return <PropertiesSection loan={loan} onUpdate={handleUpdateLoan} />;
+                return <PropertiesSection 
+                            loan={loan} 
+                            onUpdate={handleUpdateLoan}
+                            onUploadPhoto={uploadPropertyPhoto}
+                            onDeletePhoto={deletePropertyPhoto}
+                        />;
             case 'history':
                 return <HistorySection loan={loan} onDeleteEvent={handleDeleteHistoryEvent} />;
             case 'documents':

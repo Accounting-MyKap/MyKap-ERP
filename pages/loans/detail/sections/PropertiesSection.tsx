@@ -1,28 +1,39 @@
 import React, { useState } from 'react';
-import { Prospect, Property } from '../../../prospects/types';
+import { Prospect, Property, PropertyPhoto } from '../../../prospects/types';
 import { formatCurrency } from '../../../../utils/formatters';
-import { AddIcon, EditIcon, TrashIcon } from '../../../../components/icons';
+import { AddIcon, EditIcon, TrashIcon, CameraIcon } from '../../../../components/icons';
 import PropertyModal from '../PropertyModal';
+import PropertyPhotosModal from '../PropertyPhotosModal';
+
 
 interface PropertiesSectionProps {
     loan: Prospect;
     onUpdate: (updatedData: Partial<Prospect>) => void;
+    onUploadPhoto: (prospectId: string, propertyId: string, file: File) => Promise<void>;
+    onDeletePhoto: (prospectId: string, propertyId: string, photo: PropertyPhoto) => Promise<void>;
 }
 
-const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate, onUploadPhoto, onDeletePhoto }) => {
+    const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
+    const [isPhotosModalOpen, setIsPhotosModalOpen] = useState(false);
     const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+    const [viewingPhotosFor, setViewingPhotosFor] = useState<Property | null>(null);
 
     const properties = loan.properties || [];
 
     const handleAddClick = () => {
         setEditingProperty(null);
-        setIsModalOpen(true);
+        setIsPropertyModalOpen(true);
     };
 
     const handleEditClick = (prop: Property) => {
         setEditingProperty(prop);
-        setIsModalOpen(true);
+        setIsPropertyModalOpen(true);
+    };
+    
+    const handlePhotosClick = (prop: Property) => {
+        setViewingPhotosFor(prop);
+        setIsPhotosModalOpen(true);
     };
 
     const handleDeleteClick = (propId: string) => {
@@ -50,7 +61,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate })
         }
 
         onUpdate({ properties: updatedProperties });
-        setIsModalOpen(false);
+        setIsPropertyModalOpen(false);
     };
 
     return (
@@ -70,6 +81,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate })
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
                                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Appraisal Value</th>
+                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Photos</th>
                                 <th className="relative px-4 py-3"><span className="sr-only">Actions</span></th>
                             </tr>
                         </thead>
@@ -82,6 +94,11 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate })
                                         {`${prop.address.street || ''}, ${prop.address.city || ''}, ${prop.address.state || ''} ${prop.address.zip || ''}`.trim().replace(/^,|,$/g, '') || 'N/A'}
                                     </td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 text-right">{formatCurrency(prop.appraisal_value)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-center">
+                                        <button onClick={() => handlePhotosClick(prop)} className="text-gray-500 hover:text-blue-600" title="View Photos">
+                                            <CameraIcon className="h-5 w-5 mx-auto"/>
+                                        </button>
+                                    </td>
                                     <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                                         <button onClick={() => handleEditClick(prop)} className="text-blue-600 hover:text-blue-900" title="Edit Property"><EditIcon className="h-5 w-5"/></button>
                                         <button onClick={() => handleDeleteClick(prop.id)} className="text-red-600 hover:text-red-900" title="Delete Property"><TrashIcon className="h-5 w-5"/></button>
@@ -97,12 +114,22 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({ loan, onUpdate })
                 </div>
             )}
             <PropertyModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                isOpen={isPropertyModalOpen}
+                onClose={() => setIsPropertyModalOpen(false)}
                 onSave={handleSave}
                 property={editingProperty}
                 loan={loan}
             />
+            {viewingPhotosFor && (
+                 <PropertyPhotosModal
+                    isOpen={isPhotosModalOpen}
+                    onClose={() => setIsPhotosModalOpen(false)}
+                    property={viewingPhotosFor}
+                    loan={loan}
+                    onUpload={onUploadPhoto}
+                    onDelete={onDeletePhoto}
+                />
+            )}
         </div>
     );
 };
