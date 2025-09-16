@@ -27,6 +27,10 @@ const RegisterPage: React.FC = () => {
             email,
             password,
             options: {
+                // This is the crucial addition. It tells Supabase where to redirect the user
+                // after they click the confirmation link in their email.
+                // window.location.origin ensures it works for both localhost and production domains.
+                emailRedirectTo: window.location.origin,
                 data: {
                     first_name: firstName,
                     last_name: lastName,
@@ -39,7 +43,8 @@ const RegisterPage: React.FC = () => {
         }
 
         if (data.user) {
-            alert('Registration successful! Please log in.');
+            // Updated user feedback to reflect the need for email confirmation.
+            alert('Registration successful! Please check your email to confirm your account.');
             navigate('/login');
         }
 

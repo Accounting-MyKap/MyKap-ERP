@@ -7,6 +7,7 @@ interface Profile {
   id: string;
   first_name: string;
   last_name: string;
+  email: string | null;
   middle_name: string | null;
   second_surname: string | null;
   phone_number: string | null;
@@ -28,16 +29,43 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 // Helper function to fetch a user's profile
 const fetchProfile = async (user: User | null): Promise<Profile | null> => {
     if (!user) return null;
+
+    // Step 1: Fetch the profile as usual.
     const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+
     if (error) {
         console.error('Error fetching profile:', error.message);
         return null;
     }
-    return profileData;
+    
+    // Step 2: Check if the email is missing or out of sync.
+    // The user's email is the source of truth from `auth.users`.
+    if (profileData && (!profileData.email || profileData.email !== user.email)) {
+        console.log(`[Profile Sync] Profile for ${user.id} is missing or has a mismatched email. Syncing...`);
+        
+        // Step 3: Update the profile with the correct email.
+        const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({ email: user.email })
+            .eq('id', user.id)
+            .select()
+            .single();
+            
+        if (updateError) {
+            console.error('Error syncing profile email:', updateError.message);
+            // Return the original data, even if stale, on update failure.
+            return profileData as Profile;
+        }
+        
+        console.log('[Profile Sync] Email sync successful.');
+        return updatedProfile as Profile; // Return the freshly updated profile.
+    }
+
+    return profileData as Profile; // Return the profile if it's already correct.
 }
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
