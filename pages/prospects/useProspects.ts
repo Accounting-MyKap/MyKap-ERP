@@ -374,6 +374,7 @@ export const useProspects = () => {
                 type: 'Payment',
                 total_amount: payment.amount,
                 notes: payment.notes,
+                distributions: payment.distributions,
             };
             const updatedFunders = (p.funders || []).map(funder => {
                 const distribution = payment.distributions.find(d => d.funderId === funder.id);

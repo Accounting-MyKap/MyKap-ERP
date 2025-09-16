@@ -2,7 +2,7 @@
 
 export type DocumentStatus = 'missing' | 'ready_for_review' | 'approved' | 'rejected';
 export type StageStatus = 'completed' | 'in_progress' | 'locked';
-export type ApplicantType = 'individual' | 'company' | 'property' | 'general';
+export type ApplicantType = 'individual' | 'company' | 'property' | 'general' | 'closing_final_approval';
 export type ClosingDocStatusKey = 'sent' | 'signed' | 'filled';
 
 export interface Document {
@@ -28,6 +28,7 @@ export interface Stage {
         company?: Document[];
         property?: Document[];
         general?: Document[];
+        closing_final_approval?: Document[];
     };
 }
 
@@ -90,6 +91,7 @@ export interface HistoryEvent {
     type: string;
     total_amount: number;
     notes?: string;
+    distributions?: { funderId: string; amount: number }[];
 }
 
 export interface Property {

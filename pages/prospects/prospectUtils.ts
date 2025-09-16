@@ -67,6 +67,9 @@ const getStageSpecificDocs = (stageName: string): Stage['documents'] => {
                     { id: 'cl2', name: 'Guaranty Agreement', status: 'missing', is_custom: false, sent: false, signed: false, filled: false, category: 'loan_docs' },
                     { id: 'cl3', name: 'Mortgage', status: 'missing', is_custom: false, sent: false, signed: false, filled: false, category: 'loan_docs' },
                     { id: 'cl4', name: 'Wire Transfer Breakdown', status: 'missing', is_custom: false, sent: false, signed: false, filled: false, category: 'loan_docs' },
+                ],
+                closing_final_approval: [
+                     { id: 'cl5', name: 'EOI (Evidence of Insurance)', status: 'missing', is_custom: false },
                 ]
             };
         default:

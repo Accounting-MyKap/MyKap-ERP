@@ -18,9 +18,8 @@ import RecordPaymentModal from './detail/RecordPaymentModal';
 const LoanDetailPage: React.FC = () => {
     const { loanId } = useParams<{ loanId: string }>();
     const navigate = useNavigate();
-    // FIX: Destructure 'updateProspect' instead of non-existent 'updateLoan'
     const { prospects, loading, updateProspect, recordLoanPayment } = useProspects();
-    const { addFundsToLenderTrust } = useLenders();
+    const { addFundsToLenderTrust, withdrawFromLenderTrust } = useLenders();
     const [loan, setLoan] = useState<Prospect | null>(null);
     const [activeSection, setActiveSection] = useState<Section>('borrower');
     const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
@@ -38,7 +37,6 @@ const LoanDetailPage: React.FC = () => {
         }
     }, [loanId, prospects, loading, navigate]);
     
-    // This effect ensures the local `loan` state is always in sync with the global `prospects` state.
     useEffect(() => {
         if (loan) {
             const freshLoanData = prospects.find(p => p.id === loan.id);
@@ -51,9 +49,28 @@ const LoanDetailPage: React.FC = () => {
 
     const handleUpdateLoan = (updatedData: Partial<Prospect>) => {
         if (loan) {
+            // Correctly deduct from lender trust balance when a new funding event occurs
+            const oldHistory = loan.history || [];
+            const newHistory = updatedData.history || [];
+            if (newHistory.length > oldHistory.length) {
+                const newEvent = newHistory[newHistory.length - 1];
+                if (newEvent.type === 'Funding' && newEvent.distributions) {
+                    newEvent.distributions.forEach(dist => {
+                        const funder = loan.funders?.find(f => f.id === dist.funderId);
+                        if (funder) {
+                            // FIX: The `withdrawFromLenderTrust` function expects an object for its second argument.
+                            withdrawFromLenderTrust(funder.lender_id, {
+                                date: newEvent.date_received,
+                                amount: dist.amount,
+                                description: `Funding for loan ${loan.prospect_code}`
+                            });
+                        }
+                    });
+                }
+            }
+
             const updatedLoan = { ...loan, ...updatedData };
             setLoan(updatedLoan); // Optimistic update
-            // FIX: Call 'updateProspect' with the correct single-object argument signature
             updateProspect({ id: loan.id, ...updatedData });
         }
     };
@@ -61,7 +78,6 @@ const LoanDetailPage: React.FC = () => {
     const handleSavePayment = (paymentData: { date: string; amount: number; notes?: string; distributions: { funderId: string; lender_id: string; amount: number }[] }) => {
         if (!loan) return;
 
-        // Step 1: Update the loan itself (reduce principal, update funder balances, add history)
         recordLoanPayment(loan.id, {
             date: paymentData.date,
             amount: paymentData.amount,
@@ -69,7 +85,6 @@ const LoanDetailPage: React.FC = () => {
             distributions: paymentData.distributions,
         });
 
-        // Step 2: Distribute funds to each lender's trust account
         paymentData.distributions.forEach(dist => {
             if (dist.amount > 0) {
                  addFundsToLenderTrust(dist.lender_id, dist.amount, `Payment distribution from loan ${loan.prospect_code}`);
@@ -77,6 +92,69 @@ const LoanDetailPage: React.FC = () => {
         });
 
         setPaymentModalOpen(false);
+    };
+
+    const handleDeleteHistoryEvent = (eventId: string) => {
+        if (!loan) return;
+
+        const eventToDelete = loan.history?.find(h => h.id === eventId);
+        if (!eventToDelete) return;
+
+        let newPrincipalBalance = loan.terms?.principal_balance || 0;
+        let updatedFunders = JSON.parse(JSON.stringify(loan.funders || []));
+
+        if (eventToDelete.type === 'Payment') {
+            newPrincipalBalance += eventToDelete.total_amount;
+            if (eventToDelete.distributions) {
+                eventToDelete.distributions.forEach(dist => {
+                    const funder = updatedFunders.find(f => f.id === dist.funderId);
+                    if (funder) {
+                        funder.principal_balance += dist.amount;
+                        // Reverse the payment by "withdrawing" the distributed funds from the lender's trust
+                        const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
+                        if(lenderToUpdate) {
+                            // FIX: The `withdrawFromLenderTrust` function expects an object for its second argument.
+                            withdrawFromLenderTrust(lenderToUpdate.lender_id, {
+                                date: eventToDelete.date_received,
+                                amount: dist.amount,
+                                description: `Reversal of payment for loan ${loan.prospect_code}`
+                            });
+                        }
+                    }
+                });
+            }
+        } else if (eventToDelete.type === 'Funding') {
+            // This logic assumes funding adds to principal; reversing it subtracts.
+            newPrincipalBalance -= eventToDelete.total_amount;
+             if (eventToDelete.distributions) {
+                eventToDelete.distributions.forEach(dist => {
+                    const funder = updatedFunders.find(f => f.id === dist.funderId);
+                    if (funder) {
+                        funder.principal_balance -= dist.amount;
+                        // Reverse the funding by "depositing" the funds back to the lender's trust
+                        const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
+                        if(lenderToUpdate) {
+                            addFundsToLenderTrust(lenderToUpdate.lender_id, dist.amount, `Reversal of funding for loan ${loan.prospect_code}`);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Recalculate percentage owned for all funders
+        const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
+        updatedFunders = totalPrincipal > 0
+            ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))
+            : updatedFunders.map(f => ({ ...f, pct_owned: 0 }));
+
+        const newHistory = loan.history?.filter(h => h.id !== eventId) || [];
+        
+        updateProspect({
+            id: loan.id,
+            history: newHistory,
+            terms: { ...loan.terms, principal_balance: newPrincipalBalance },
+            funders: updatedFunders,
+        });
     };
 
     const handleSelect = (section: Section, subSection?: SubSection | null) => {
@@ -108,7 +186,7 @@ const LoanDetailPage: React.FC = () => {
             case 'properties':
                 return <PropertiesSection loan={loan} onUpdate={handleUpdateLoan} />;
             case 'history':
-                return <HistorySection loan={loan} />;
+                return <HistorySection loan={loan} onDeleteEvent={handleDeleteHistoryEvent} />;
             case 'documents':
                 return <DocumentsSection loan={loan} />;
             default:

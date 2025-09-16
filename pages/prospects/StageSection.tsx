@@ -68,14 +68,29 @@ const StageSection: React.FC<StageSectionProps> = ({
                 </div>
             </button>
             {isOpen && stage.status !== 'locked' && (
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-6">
                     {isClosingStage ? (
-                        <ClosingDocumentManager
-                            documents={stage.documents.general || []}
-                            onUpdateStatus={onUpdateClosingDocumentStatus}
-                            onUploadDocument={(docId, file) => onUploadDocument(docId, 'general', file)}
-                            onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, 'general')}
-                        />
+                        <>
+                            {stage.documents.general && stage.documents.general.length > 0 && (
+                                <ClosingDocumentManager
+                                    documents={stage.documents.general}
+                                    onUpdateStatus={onUpdateClosingDocumentStatus}
+                                    onUploadDocument={(docId, file) => onUploadDocument(docId, 'general', file)}
+                                    onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, 'general')}
+                                />
+                            )}
+                             {stage.documents.closing_final_approval && stage.documents.closing_final_approval.length > 0 && (
+                                <DocumentManager
+                                    title="Final Approval Documents"
+                                    documents={stage.documents.closing_final_approval}
+                                    onUpdateStatus={(docId, newStatus) => onUpdateDocumentStatus(docId, 'closing_final_approval', newStatus)}
+                                    onAddDocument={(docName) => onAddDocument('closing_final_approval', docName)}
+                                    onDeleteDocument={(docId) => onDeleteDocument(docId, 'closing_final_approval')}
+                                    onUploadDocument={(docId, file) => onUploadDocument(docId, 'closing_final_approval', file)}
+                                    onRemoveDocumentLink={(docId) => onRemoveDocumentLink(docId, 'closing_final_approval')}
+                                />
+                            )}
+                        </>
                     ) : (
                         applicantTypesWithDocs.map(type => 
                             (stage.documents[type] && stage.documents[type]!.length > 0) && (

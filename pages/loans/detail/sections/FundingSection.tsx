@@ -20,7 +20,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
     const { lenders } = useLenders();
     
     const funders = loan.funders || [];
-    const loanOriginatorId = 'lender-2'; // Assuming 'HKF' is the originator. This should be dynamic in a real app.
+    const loanOriginatorId = 'a6b2b7da-ffca-422c-91ef-36e6581b50f1';
 
 
     const handleAddFunder = (newFunder: Funder) => {
@@ -52,6 +52,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
             type: 'Funding',
             total_amount: data.fundingAmount,
             notes: data.reference,
+            distributions: Object.entries(data.distributions).map(([funderId, amount]) => ({ funderId, amount })),
         };
 
         // Update principal balances based on distribution
@@ -85,7 +86,11 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
 
         onUpdate({
             funders: updatedFunders,
-            history: [...(loan.history || []), newHistoryEvent]
+            history: [...(loan.history || []), newHistoryEvent],
+            terms: {
+                ...loan.terms,
+                principal_balance: totalPrincipal,
+            }
         });
     };
 
