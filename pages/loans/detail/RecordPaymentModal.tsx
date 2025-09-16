@@ -66,9 +66,9 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
     };
 
     const totalDistributed = useMemo(() => {
-        // FIX: The original reduce operation could result in string concatenation if an item was an
-        // empty string. Using Number() ensures all items are treated as numbers for a correct sum.
-        return Object.values(manualDistributions).reduce((sum, item) => sum + (Number(item) || 0), 0);
+        // FIX: Explicitly type the accumulator for the reduce function to resolve a strict
+        // TypeScript build error (TS2365) where the '+' operator was considered ambiguous.
+        return Object.values(manualDistributions).reduce<number>((sum, item) => sum + (Number(item) || 0), 0);
     }, [manualDistributions]);
     
     const remainingToDistribute = paymentAmount - totalDistributed;
@@ -142,7 +142,6 @@ const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({ isOpen, onClose
                                             type="text"
                                             inputMode="decimal"
                                             id={`dist-${funder.id}`}
-                                            // FIX: Simplified value prop to correctly handle `number | ''` type and prevent type errors with `formatNumber`.
                                             value={formatNumber(manualDistributions[funder.id] || undefined)}
                                             onChange={(e) => handleDistributionChange(funder.id, e.target.value)}
                                             className="input-field input-field-with-adornment-left text-right"
