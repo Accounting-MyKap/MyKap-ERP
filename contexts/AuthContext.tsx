@@ -75,11 +75,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    console.log('Setting up real-time auth state listener...');
+    // This function handles the initial session check.
+    const initializeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    // Rely solely on onAuthStateChange. It fires immediately with the current session state
-    // and then listens for any future changes. This avoids race conditions with getSession().
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        const profile = await fetchProfile(currentUser);
+        setProfile(profile);
+      }
+      
+      setLoading(false);
+    };
+
+    initializeSession();
+
+    // Set up a listener for subsequent auth state changes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
         console.log(`%c[Auth State Change] Event: ${_event}`, 'color: #007bff; font-weight: bold;', { session: newSession });
         
@@ -93,11 +107,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
             setProfile(null);
         }
-        
-        // The first time this runs, it will set loading to false.
-        setLoading(false);
     });
-    
+
     // Cleanup the listener when the component unmounts.
     return () => {
         if (subscription) {
@@ -105,7 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             subscription.unsubscribe();
         }
     };
-  }, []); // Empty dependency array ensures this runs only once on mount.
+  }, []);
 
 
   const signOut = useCallback(async () => {

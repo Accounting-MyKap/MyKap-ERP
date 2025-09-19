@@ -24,7 +24,7 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        if (['original_amount', 'principal_balance', 'trust_balance'].includes(name)) {
+        if (['original_amount', 'principal_balance', 'trust_balance', 'monthly_payment'].includes(name)) {
             const parsedValue = parseCurrency(value);
             setTerms(prev => ({ ...prev, [name]: parsedValue === 0 ? undefined : parsedValue }));
         } else {
@@ -63,6 +63,10 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                             <span className="input-adornment-right">%</span>
                         </div>
                     </div>
+                    <div>
+                        <label htmlFor="loan_term_months" className="block text-sm font-medium text-gray-700">Loan Term (months)</label>
+                        <input type="number" id="loan_term_months" name="loan_term_months" value={terms.loan_term_months || ''} onChange={handleChange} className="input-field mt-1 text-right" />
+                    </div>
                 </div>
                 {/* Loan Balances */}
                  <div className="space-y-4">
@@ -79,6 +83,13 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
                             <input type="text" inputMode="decimal" id="trust_balance" name="trust_balance" value={formatNumber(terms.trust_balance)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="monthly_payment" className="block text-sm font-medium text-gray-700">Monthly Payment</label>
+                        <div className="input-container mt-1">
+                            <span className="input-adornment">$</span>
+                            <input type="text" inputMode="decimal" id="monthly_payment" name="monthly_payment" value={formatNumber(terms.monthly_payment)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                 </div>

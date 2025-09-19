@@ -61,6 +61,8 @@ export interface LoanTerms {
     trust_balance?: number;
     closing_date?: string; // YYYY-MM-DD
     maturity_date?: string; // YYYY-MM-DD
+    loan_term_months?: number;
+    monthly_payment?: number;
 }
 
 export interface ServicingFees {

@@ -56,6 +56,13 @@ const CoBorrowerModal: React.FC<CoBorrowerModalProps> = ({ isOpen, onClose, onSa
                         <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Full Name</label>
                         <input type="text" id="full_name" name="full_name" value={formData.full_name || ''} onChange={handleChange} className="input-field mt-1" required />
                     </div>
+                    <div>
+                        <label htmlFor="relation_type" className="block text-sm font-medium text-gray-700">Relation Type</label>
+                        <select id="relation_type" name="relation_type" value={formData.relation_type || 'Co-Borrower'} onChange={handleChange} className="input-field mt-1">
+                            <option>Co-Borrower</option>
+                            <option>Guarantor</option>
+                        </select>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label htmlFor="salutation" className="block text-sm font-medium text-gray-700">Salutation</label>
