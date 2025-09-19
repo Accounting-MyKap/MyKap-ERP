@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Header from '../components/Header';
-import { ProspectsIcon, CreditsIcon, LendersIcon } from '../components/icons';
+import { ProspectsIcon, CreditsIcon, LendersIcon, CheckCircleIcon, CloseIcon } from '../components/icons';
 import { useAuth } from '../hooks/useAuth';
 
 const ModuleCard: React.FC<{ icon: React.ElementType; title: string; description: string }> = ({ icon: Icon, title, description }) => (
@@ -27,9 +27,32 @@ const PendingApproval: React.FC = () => (
     </div>
 );
 
+const WelcomeToast: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+    <div className="fixed top-20 right-6 bg-green-500 text-white p-4 rounded-lg shadow-lg flex items-center space-x-3 z-50">
+        <CheckCircleIcon className="h-6 w-6" />
+        <span className="font-semibold">Welcome! Your account has been confirmed.</span>
+        <button onClick={onClose} className="text-white hover:text-green-100">
+            <CloseIcon className="h-5 w-5" />
+        </button>
+    </div>
+);
+
 
 const DashboardPage: React.FC = () => {
     const { profile } = useAuth();
+    const [showWelcomeToast, setShowWelcomeToast] = useState(false);
+
+    useEffect(() => {
+        // Show welcome toast only if the user is new (has no role yet)
+        if (profile && !profile.role) {
+            setShowWelcomeToast(true);
+            const timer = setTimeout(() => {
+                setShowWelcomeToast(false);
+            }, 5000); // Hide after 5 seconds
+            return () => clearTimeout(timer);
+        }
+    }, [profile]);
+
 
     const modules = [
         {
@@ -54,6 +77,7 @@ const DashboardPage: React.FC = () => {
 
     return (
         <DashboardLayout>
+            {showWelcomeToast && <WelcomeToast onClose={() => setShowWelcomeToast(false)} />}
             <Header />
             {profile?.role ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
