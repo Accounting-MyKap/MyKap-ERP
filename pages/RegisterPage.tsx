@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { CheckCircleIcon } from '../components/icons';
 
 const RegisterPage: React.FC = () => {
   const [firstName, setFirstName] = useState('');
@@ -10,6 +11,8 @@ const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const navigate = useNavigate();
   const { session, loading } = useAuth();
 
@@ -21,15 +24,13 @@ const RegisterPage: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     setError(null);
     try {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                // This is the crucial addition. It tells Supabase where to redirect the user
-                // after they click the confirmation link in their email.
-                // window.location.origin ensures it works for both localhost and production domains.
                 emailRedirectTo: window.location.origin,
                 data: {
                     first_name: firstName,
@@ -43,13 +44,13 @@ const RegisterPage: React.FC = () => {
         }
 
         if (data.user) {
-            // Updated user feedback to reflect the need for email confirmation.
-            alert('Registration successful! Please check your email to confirm your account.');
-            navigate('/login');
+            setRegistrationSuccess(true);
         }
 
     } catch (err: any) {
         setError(err.error_description || err.message);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -59,6 +60,25 @@ const RegisterPage: React.FC = () => {
             <div className="text-xl font-semibold text-gray-700">Loading...</div>
         </div>
     );
+  }
+
+  if (registrationSuccess) {
+    return (
+        <AuthLayout>
+            <div className="text-center">
+                <CheckCircleIcon className="mx-auto h-12 w-12 text-green-500" />
+                <h2 className="mt-4 text-2xl font-bold text-gray-900">Registration Successful!</h2>
+                <p className="mt-2 text-sm text-gray-600">
+                    A confirmation link has been sent to <span className="font-semibold">{email}</span>. Please check your inbox to activate your account.
+                </p>
+                <div className="mt-6">
+                    <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                        &larr; Back to Sign In
+                    </Link>
+                </div>
+            </div>
+        </AuthLayout>
+    )
   }
 
   return (
@@ -133,14 +153,15 @@ const RegisterPage: React.FC = () => {
           </div>
         </div>
         
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-sm text-red-600 text-center">{error}</p>}
 
         <div>
           <button
             type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={isSubmitting}
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
           >
-            Sign Up
+            {isSubmitting ? 'Creating Account...' : 'Sign Up'}
           </button>
         </div>
       </form>
