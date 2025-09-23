@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ProspectsProvider } from './contexts/ProspectsContext';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -27,8 +28,13 @@ const ProtectedRoute: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // If session exists, render the child routes
-  return <Outlet />;
+  // If session exists, wrap the child routes in the ProspectsProvider
+  // to provide a single, shared state for all prospect/loan data.
+  return (
+    <ProspectsProvider>
+      <Outlet />
+    </ProspectsProvider>
+  );
 };
 
 

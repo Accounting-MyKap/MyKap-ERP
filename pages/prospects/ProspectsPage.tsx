@@ -25,6 +25,8 @@ const ProspectsPage: React.FC = () => {
         removeDocumentLink,
         reopenProspect,
         rejectProspect, 
+        uploadPropertyPhoto,
+        deletePropertyPhoto
     } = useProspects();
 
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -86,6 +88,8 @@ const ProspectsPage: React.FC = () => {
                             onRemoveDocumentLink={removeDocumentLink}
                             onReopenProspect={reopenProspect}
                             onRejectProspect={rejectProspect}
+                            onUploadPropertyPhoto={uploadPropertyPhoto}
+                            onDeletePropertyPhoto={deletePropertyPhoto}
                         />
                     </div>
                 </div>
