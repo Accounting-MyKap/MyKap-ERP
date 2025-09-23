@@ -3,9 +3,9 @@ import { Prospect, Stage, Document, DocumentStatus, ApplicantType, UserProfile, 
 import ProspectDetailSidebar, { Section, SubSection } from './detail/ProspectDetailSidebar';
 import ProspectInfoSection from './detail/sections/ProspectInfoSection';
 import StagesSection from './detail/sections/StagesSection';
-import CoBorrowersSection from '../../loans/detail/sections/CoBorrowersSection';
-import PropertiesSection from '../../loans/detail/sections/PropertiesSection';
-import TermsSection from '../../loans/detail/sections/TermsSection';
+import CoBorrowersSection from '../loans/detail/sections/CoBorrowersSection';
+import PropertiesSection from '../loans/detail/sections/PropertiesSection';
+import TermsSection from '../loans/detail/sections/TermsSection';
 import GenerateDocumentModal from './GenerateDocumentModal';
 import { ReopenIcon, GenerateDocsIcon } from '../../components/icons';
 
