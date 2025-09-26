@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useProspects } from '../prospects/useProspects';
@@ -20,33 +20,26 @@ const LoanDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { prospects, loading, updateProspect, recordLoanPayment, uploadPropertyPhoto, deletePropertyPhoto } = useProspects();
     const { addFundsToLenderTrust, withdrawFromLenderTrust } = useLenders();
-    const [loan, setLoan] = useState<Prospect | null>(null);
+    
+    // DERIVED STATE: The loan object is now derived directly from the master list.
+    // This is the core of the fix, preventing re-render loops by eliminating local state synchronization.
+    const loan = useMemo(() => 
+        prospects.find(p => p.id === loanId && p.status === 'completed'),
+        [prospects, loanId]
+    );
+
     const [activeSection, setActiveSection] = useState<Section>('borrower');
     const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
 
+    // This effect now safely handles the case where a loan is not found after loading is complete.
     useEffect(() => {
-        if (!loading) {
-            const foundLoan = prospects.find(p => p.id === loanId && p.status === 'completed');
-            if (foundLoan) {
-                setLoan(foundLoan);
-            } else {
-                // Loan not found or not completed, redirect
-                navigate('/loans');
-            }
+        if (!loading && !loan) {
+            console.warn(`Loan with ID ${loanId} not found or not completed. Redirecting.`);
+            navigate('/loans');
         }
-    }, [loanId, prospects, loading, navigate]);
+    }, [loanId, loan, loading, navigate]);
     
-    useEffect(() => {
-        if (loan) {
-            const freshLoanData = prospects.find(p => p.id === loan.id);
-            if (freshLoanData && JSON.stringify(freshLoanData) !== JSON.stringify(loan)) {
-                setLoan(freshLoanData);
-            }
-        }
-    }, [prospects, loan]);
-
-
     const handleUpdateLoan = async (updatedData: Partial<Prospect>) => {
         if (loan) {
             // Correctly deduct from lender trust balance when a new funding event occurs
@@ -58,7 +51,6 @@ const LoanDetailPage: React.FC = () => {
                     newEvent.distributions.forEach(dist => {
                         const funder = loan.funders?.find(f => f.id === dist.funderId);
                         if (funder) {
-                            // FIX: The `withdrawFromLenderTrust` function expects an object for its second argument.
                             withdrawFromLenderTrust(funder.lender_id, {
                                 date: newEvent.date_received,
                                 amount: dist.amount,
@@ -68,9 +60,8 @@ const LoanDetailPage: React.FC = () => {
                     });
                 }
             }
-
-            const updatedLoan = { ...loan, ...updatedData };
-            setLoan(updatedLoan); // Optimistic update
+            // The component will automatically re-render with the updated data from the context.
+            // No local state update (`setLoan`) is needed.
             await updateProspect({ id: loan.id, ...updatedData });
         }
     };
@@ -110,10 +101,8 @@ const LoanDetailPage: React.FC = () => {
                     const funder = updatedFunders.find(f => f.id === dist.funderId);
                     if (funder) {
                         funder.principal_balance += dist.amount;
-                        // Reverse the payment by "withdrawing" the distributed funds from the lender's trust
                         const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
                         if(lenderToUpdate) {
-                            // FIX: The `withdrawFromLenderTrust` function expects an object for its second argument.
                             withdrawFromLenderTrust(lenderToUpdate.lender_id, {
                                 date: eventToDelete.date_received,
                                 amount: dist.amount,
@@ -124,14 +113,12 @@ const LoanDetailPage: React.FC = () => {
                 });
             }
         } else if (eventToDelete.type === 'Funding') {
-            // This logic assumes funding adds to principal; reversing it subtracts.
             newPrincipalBalance -= eventToDelete.total_amount;
              if (eventToDelete.distributions) {
                 eventToDelete.distributions.forEach(dist => {
                     const funder = updatedFunders.find(f => f.id === dist.funderId);
                     if (funder) {
                         funder.principal_balance -= dist.amount;
-                        // Reverse the funding by "depositing" the funds back to the lender's trust
                         const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
                         if(lenderToUpdate) {
                             addFundsToLenderTrust(lenderToUpdate.lender_id, dist.amount, `Reversal of funding for loan ${loan.prospect_code}`);
@@ -141,7 +128,6 @@ const LoanDetailPage: React.FC = () => {
             }
         }
 
-        // Recalculate percentage owned for all funders
         const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
         updatedFunders = totalPrincipal > 0
             ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))

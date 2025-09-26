@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import { useLenders } from '../useLenders';
@@ -16,30 +16,25 @@ const LenderDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { lenders, loading: lendersLoading, updateLender } = useLenders();
     const { prospects: allLoans, loading: loansLoading } = useProspects();
-    const [lender, setLender] = useState<Lender | null>(null);
-    const [activeSection, setActiveSection] = useState<Section>('info');
+    
+    // DERIVED STATE: The lender object is now derived directly from the master list.
+    // This is the core of the fix, preventing re-render loops by eliminating local state synchronization.
+    const lender = useMemo(() => 
+        lenders.find(l => l.id === lenderId),
+        [lenders, lenderId]
+    );
 
+    const [activeSection, setActiveSection] = useState<Section>('info');
     const loading = lendersLoading || loansLoading;
 
+    // This effect now safely handles the case where a lender is not found after loading is complete.
     useEffect(() => {
-        if (!loading && lenderId) {
-            const foundLender = lenders.find(l => l.id === lenderId);
-            if (foundLender) {
-                setLender(foundLender);
-            } else {
-                navigate('/lenders');
-            }
+        if (!loading && !lender && lenderId) {
+            console.warn(`Lender with ID ${lenderId} not found. Redirecting.`);
+            navigate('/lenders');
         }
-    }, [lenderId, lenders, loading, navigate]);
+    }, [lenderId, lender, loading, navigate]);
 
-    useEffect(() => {
-        if(lender) {
-            const freshData = lenders.find(l => l.id === lender.id);
-            if (freshData && JSON.stringify(freshData) !== JSON.stringify(lender)) {
-                setLender(freshData);
-            }
-        }
-    }, [lenders, lender]);
 
     if (loading || !lender) {
         return (
