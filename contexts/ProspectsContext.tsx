@@ -30,11 +30,11 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
         allRequiredDocs = allRequiredDocs.concat(currentStage.documents.property || []);
     } else {
          allRequiredDocs = allRequiredDocs.concat(currentStage.documents.general || []);
+         allRequiredDocs = allRequiredDocs.concat(currentStage.documents.closing_final_approval || []);
     }
 
     if (allRequiredDocs.length === 0) {
-        // Edge case: If a stage has no required documents, it should be completable by a manual action,
-        // not automatically. For now, we assume auto-advance only happens if there are docs and they are approved.
+        // If a stage has no documents, it can't be auto-advanced.
         return prospect;
     }
 
@@ -108,6 +108,7 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
     }
 };
 
+
 interface ProspectsContextType {
     prospects: Prospect[];
     users: UserProfile[];
@@ -173,13 +174,55 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
         loadInitialData();
     }, [fetchProspects, fetchUsers]);
     
-    const syncProspect = (updatedProspect: Prospect) => {
-        setProspects(prev => prev.map(p => p.id === updatedProspect.id ? updatedProspect : p));
-    }
+    /**
+     * The single, authoritative function for updating any prospect data.
+     * It handles optimistic updates, error rollbacks, and ensures only changed data is sent.
+     */
+    const updateProspectData = useCallback(async (prospectId: string, updatePayload: Partial<Prospect>) => {
+        // If the assigned user is changing, find the new name and add it to the payload.
+        if (updatePayload.assigned_to && users) {
+            const assignedUser = users.find(u => u.id === updatePayload.assigned_to);
+            if (assignedUser) {
+                updatePayload.assigned_to_name = `${assignedUser.first_name} ${assignedUser.last_name}`;
+            }
+        }
 
-    const addProspect = async (prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
+        const originalProspect = prospects.find(p => p.id === prospectId);
+        if (!originalProspect) {
+            throw new Error(`[updateProspect] Prospect with ID ${prospectId} not found.`);
+        }
+
+        // Optimistically update the UI for a responsive feel.
+        const optimisticallyUpdated = { ...originalProspect, ...updatePayload };
+        setProspects(prev => prev.map(p => p.id === prospectId ? optimisticallyUpdated : p));
+
+        // Send only the changed fields to Supabase.
+        const { data, error } = await supabase
+            .from('prospects')
+            .update(updatePayload)
+            .eq('id', prospectId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error updating prospect:', error);
+            // If the update fails, revert the UI to the original state.
+            setProspects(prev => prev.map(p => p.id === prospectId ? originalProspect : p));
+            throw error; // Propagate the error to the calling component.
+        }
+
+        if (data) {
+            // Sync the UI with the final, confirmed state from the database.
+            setProspects(prev => prev.map(p => p.id === prospectId ? data : p));
+        }
+    }, [prospects, users]);
+
+    const addProspect = useCallback(async (prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
         const assignedUser = users.find(u => u.id === prospectData.assigned_to);
-        if (!assignedUser) return;
+        if (!assignedUser) {
+            console.error("Cannot add prospect: Assigned user not found.");
+            return;
+        }
 
         const newProspect = generateNewProspect(prospectData, assignedUser);
 
@@ -194,144 +237,101 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
         } else if (data) {
             setProspects(prev => [data, ...prev]);
         }
-    };
+    }, [users]);
 
-    const updateProspect = async (updatedData: Partial<Prospect> & { id: string }) => {
+    const updateProspect = useCallback(async (updatedData: Partial<Prospect> & { id: string }) => {
         const { id, ...updateFields } = updatedData;
-        const originalProspect = prospects.find(p => p.id === id);
-        if (!originalProspect) return;
-        
-        // Optimistic update for responsiveness
-        const optimisticallyUpdated = { ...originalProspect, ...updateFields };
-        syncProspect(optimisticallyUpdated);
-
-        const { data, error } = await supabase
-            .from('prospects')
-            .update(updateFields)
-            .eq('id', id)
-            .select()
-            .single();
-        
-        if (error) {
-            console.error('Error updating prospect:', error);
-            syncProspect(originalProspect); // Revert on error
-            throw error; // Re-throw the error to be caught by the calling component
-        } else if (data) {
-            syncProspect(data); // Sync with final DB state
-        }
-    };
+        await updateProspectData(id, updateFields);
+    }, [updateProspectData]);
     
-    // Generic function to handle updates to a prospect's state
-    const handleProspectUpdate = async (prospectId: string, updateFunction: (prospect: Prospect) => Prospect) => {
-        const prospectToUpdate = prospects.find(p => p.id === prospectId);
-        if (!prospectToUpdate) return;
+    const updateDocumentStatus = useCallback((prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, newStatus: DocumentStatus) => {
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) return;
 
-        const updatedProspect = updateFunction(prospectToUpdate);
+        const newStages = prospect.stages.map(s => {
+            if (s.id !== stageId) return s;
+            const newDocs = s.documents[applicantType]?.map(d => 
+                d.id === docId ? { ...d, status: newStatus } : d
+            ) || [];
+            return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
+        });
 
-        // Optimistic UI update
-        syncProspect(updatedProspect);
-
-        // FIX: Destructure out immutable/server-set fields before sending the update payload.
-        // This prevents sending the entire object and ensures a clean update.
-        const { id, created_at, ...updatePayload } = updatedProspect;
-
-
-        const { data, error } = await supabase
-            .from('prospects')
-            .update(updatePayload)
-            .eq('id', prospectId)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Failed to update prospect:', error.message);
-            // Revert optimistic update on failure
-            syncProspect(prospectToUpdate);
-        } else if (data) {
-            // Re-sync with the confirmed state from the DB
-            syncProspect(data);
+        let updatedProspect = { ...prospect, stages: newStages };
+        if (newStatus === 'approved') {
+            updatedProspect = checkAndAdvanceStage(updatedProspect);
         }
-    };
+        
+        // Construct a payload of only the fields that could have changed.
+        const { stages, status, current_stage, current_stage_name, terms, funders, history } = updatedProspect;
+        updateProspectData(prospectId, { stages, status, current_stage, current_stage_name, terms, funders, history });
+    }, [prospects, updateProspectData]);
 
-
-    const updateDocumentStatus = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, newStatus: DocumentStatus) => {
-        handleProspectUpdate(prospectId, (p) => {
-            const newStages = p.stages.map(s => {
-                if (s.id !== stageId) return s;
-                const newDocs = s.documents[applicantType]?.map(d => 
-                    d.id === docId ? { ...d, status: newStatus } : d
-                ) || [];
-                return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
-            });
-
-            let updatedProspect = { ...p, stages: newStages };
-            if (newStatus === 'approved') {
-                updatedProspect = checkAndAdvanceStage(updatedProspect);
-            }
-            return updatedProspect;
+    const updateClosingDocumentStatus = useCallback((prospectId: string, stageId: number, docId: string, key: ClosingDocStatusKey, value: boolean) => {
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) return;
+        
+        let docStatusChangedToApproved = false;
+        const newStages = prospect.stages.map(s => {
+            if (s.id !== stageId) return s;
+            const newDocs = s.documents.general?.map(d => {
+                if (d.id !== docId) return d;
+                const updatedDoc = { ...d, [key]: value };
+                const isNowComplete = updatedDoc.sent && updatedDoc.signed && updatedDoc.filled;
+                if (isNowComplete && updatedDoc.status !== 'approved') {
+                    updatedDoc.status = 'approved';
+                    docStatusChangedToApproved = true;
+                } else if (!isNowComplete && updatedDoc.status === 'approved') {
+                    updatedDoc.status = 'missing';
+                }
+                return updatedDoc;
+            }) || [];
+            return { ...s, documents: { ...s.documents, general: newDocs } };
         });
-    };
 
-    const updateClosingDocumentStatus = (prospectId: string, stageId: number, docId: string, key: ClosingDocStatusKey, value: boolean) => {
-        handleProspectUpdate(prospectId, p => {
-             let docStatusChangedToApproved = false;
-             const newStages = p.stages.map(s => {
-                if (s.id !== stageId) return s;
-                const newDocs = s.documents.general?.map(d => {
-                    if (d.id !== docId) return d;
-                    const updatedDoc = { ...d, [key]: value };
-                    const isNowComplete = updatedDoc.sent && updatedDoc.signed && updatedDoc.filled;
-                    if (isNowComplete && updatedDoc.status !== 'approved') {
-                        updatedDoc.status = 'approved';
-                        docStatusChangedToApproved = true;
-                    } else if (!isNowComplete && updatedDoc.status === 'approved') {
-                        updatedDoc.status = 'missing';
-                    }
-                    return updatedDoc;
-                }) || [];
-                return { ...s, documents: { ...s.documents, general: newDocs } };
-            });
-            let updatedProspect = { ...p, stages: newStages };
-            if (docStatusChangedToApproved) {
-                updatedProspect = checkAndAdvanceStage(updatedProspect);
-            }
-            return updatedProspect;
-        });
-    };
+        let updatedProspect = { ...prospect, stages: newStages };
+        if (docStatusChangedToApproved) {
+            updatedProspect = checkAndAdvanceStage(updatedProspect);
+        }
 
-    const addDocument = (prospectId: string, stageId: number, applicantType: ApplicantType, docName: string) => {
-        handleProspectUpdate(prospectId, p => {
-            const newStages = p.stages.map(s => {
-                if (s.id !== stageId) return s;
-                const newDoc: Document = {
-                    id: `doc-${crypto.randomUUID()}`, name: docName, status: 'missing', is_custom: true,
-                };
-                const updatedDocs = [...(s.documents[applicantType] || []), newDoc];
-                return { ...s, documents: { ...s.documents, [applicantType]: updatedDocs } };
-            });
-            return { ...p, stages: newStages };
-        });
-    };
+        const { stages, status, current_stage, current_stage_name, terms, funders, history } = updatedProspect;
+        updateProspectData(prospectId, { stages, status, current_stage, current_stage_name, terms, funders, history });
+    }, [prospects, updateProspectData]);
 
-    const deleteDocument = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
-        handleProspectUpdate(prospectId, p => {
-            const newStages = p.stages.map(s => {
-                if (s.id !== stageId) return s;
-                const updatedDocs = s.documents[applicantType]?.filter(d => d.id !== docId) || [];
-                return { ...s, documents: { ...s.documents, [applicantType]: updatedDocs } };
-            });
-            return { ...p, stages: newStages };
+    const addDocument = useCallback((prospectId: string, stageId: number, applicantType: ApplicantType, docName: string) => {
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) return;
+        
+        const newStages = prospect.stages.map(s => {
+            if (s.id !== stageId) return s;
+            const newDoc: Document = {
+                id: `doc-${crypto.randomUUID()}`, name: docName, status: 'missing', is_custom: true,
+            };
+            const updatedDocs = [...(s.documents[applicantType] || []), newDoc];
+            return { ...s, documents: { ...s.documents, [applicantType]: updatedDocs } };
         });
-    };
+        updateProspectData(prospectId, { stages: newStages });
+    }, [prospects, updateProspectData]);
+
+    const deleteDocument = useCallback((prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) return;
+
+        const newStages = prospect.stages.map(s => {
+            if (s.id !== stageId) return s;
+            const updatedDocs = s.documents[applicantType]?.filter(d => d.id !== docId) || [];
+            return { ...s, documents: { ...s.documents, [applicantType]: updatedDocs } };
+        });
+        updateProspectData(prospectId, { stages: newStages });
+    }, [prospects, updateProspectData]);
 
     const uploadDocument = async (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, file: File): Promise<void> => {
-        const prospectToUpdate = prospects.find(p => p.id === prospectId);
-        if (!prospectToUpdate) throw new Error("Prospect not found");
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) throw new Error("Prospect not found");
 
-        const targetStage = prospectToUpdate.stages.find(s => s.id === stageId);
+        const targetStage = prospect.stages.find(s => s.id === stageId);
         if (!targetStage) throw new Error("Stage not found");
 
-        const prospectFolder = (prospectToUpdate.prospect_code || prospectToUpdate.id).replace(/\s+/g, '_');
+        const prospectFolder = (prospect.prospect_code || prospect.id).replace(/\s+/g, '_');
         const stageFolder = targetStage.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
         const filePath = `${prospectFolder}/${stageFolder}/${docId}-${file.name}`;
 
@@ -342,76 +342,74 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
 
         const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath);
-        const publicUrl = urlData.publicUrl;
-
-        handleProspectUpdate(prospectId, p => {
-            const newStages = p.stages.map(s => {
-                if (s.id !== stageId) return s;
-                const newDocs = s.documents[applicantType]?.map(d =>
-                    d.id === docId ? { ...d, gdrive_link: publicUrl, status: 'ready_for_review' as DocumentStatus } : d
-                ) || [];
-                return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
-            });
-            return { ...p, stages: newStages };
+        
+        const newStages = prospect.stages.map(s => {
+            if (s.id !== stageId) return s;
+            const newDocs = s.documents[applicantType]?.map(d =>
+                d.id === docId ? { ...d, gdrive_link: urlData.publicUrl, status: 'ready_for_review' as DocumentStatus } : d
+            ) || [];
+            return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
         });
+        await updateProspectData(prospectId, { stages: newStages });
     };
 
-    const removeDocumentLink = (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
-        handleProspectUpdate(prospectId, p => {
-            const newStages = p.stages.map(s => {
-                if (s.id !== stageId) return s;
-                const newDocs = s.documents[applicantType]?.map(d => {
-                    if (d.id === docId) {
-                        const { gdrive_link, ...rest } = d;
-                        // TODO: Delete from Supabase Storage here if needed
-                        return { ...rest, status: 'missing' as DocumentStatus };
-                    }
-                    return d;
-                }) || [];
-                return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
-            });
-            return { ...p, stages: newStages };
+    const removeDocumentLink = useCallback((prospectId: string, stageId: number, docId: string, applicantType: ApplicantType) => {
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) return;
+
+        const newStages = prospect.stages.map(s => {
+            if (s.id !== stageId) return s;
+            const newDocs = s.documents[applicantType]?.map(d => {
+                if (d.id === docId) {
+                    const { gdrive_link, ...rest } = d;
+                    // TODO: Delete from Supabase Storage here if needed
+                    return { ...rest, status: 'missing' as DocumentStatus };
+                }
+                return d;
+            }) || [];
+            return { ...s, documents: { ...s.documents, [applicantType]: newDocs } };
         });
-    };
+        updateProspectData(prospectId, { stages: newStages });
+    }, [prospects, updateProspectData]);
     
-    const rejectProspect = (prospectId: string, stageId: number) => {
-        updateProspect({ id: prospectId, status: 'rejected', rejected_at_stage: stageId });
-    };
+    const rejectProspect = useCallback((prospectId: string, stageId: number) => {
+        updateProspectData(prospectId, { status: 'rejected', rejected_at_stage: stageId });
+    }, [updateProspectData]);
 
-    const reopenProspect = (prospectId: string) => {
-        updateProspect({ id: prospectId, status: 'in_progress', rejected_at_stage: null });
-    };
+    const reopenProspect = useCallback((prospectId: string) => {
+        updateProspectData(prospectId, { status: 'in_progress', rejected_at_stage: null });
+    }, [updateProspectData]);
 
-    const recordLoanPayment = (loanId: string, payment: { date: string; amount: number; notes?: string; distributions: { funderId: string; amount: number }[] }) => {
-        handleProspectUpdate(loanId, p => {
-            const newPrincipalBalance = (p.terms?.principal_balance || 0) - payment.amount;
-            const newHistoryEvent: HistoryEvent = {
-                id: `hist-${crypto.randomUUID()}`,
-                date_created: new Date().toISOString().split('T')[0],
-                date_received: payment.date,
-                type: 'Payment',
-                total_amount: payment.amount,
-                notes: payment.notes,
-                distributions: payment.distributions,
-            };
-            const updatedFunders = (p.funders || []).map(funder => {
-                const distribution = payment.distributions.find(d => d.funderId === funder.id);
-                const funderReduction = distribution ? distribution.amount : 0;
-                return { ...funder, principal_balance: funder.principal_balance - funderReduction };
-            });
-            const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
-            const finalFunders = totalPrincipal > 0
-                ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))
-                : updatedFunders.map(f => ({ ...f, pct_owned: 0 }));
+    const recordLoanPayment = useCallback((loanId: string, payment: { date: string; amount: number; notes?: string; distributions: { funderId: string; amount: number }[] }) => {
+        const loan = prospects.find(p => p.id === loanId);
+        if (!loan) return;
 
-            return {
-                ...p,
-                terms: { ...p.terms, principal_balance: newPrincipalBalance },
-                funders: finalFunders,
-                history: [...(p.history || []), newHistoryEvent],
-            };
+        const newPrincipalBalance = (loan.terms?.principal_balance || 0) - payment.amount;
+        const newHistoryEvent: HistoryEvent = {
+            id: `hist-${crypto.randomUUID()}`,
+            date_created: new Date().toISOString().split('T')[0],
+            date_received: payment.date,
+            type: 'Payment',
+            total_amount: payment.amount,
+            notes: payment.notes,
+            distributions: payment.distributions,
+        };
+        const updatedFunders = (loan.funders || []).map(funder => {
+            const distribution = payment.distributions.find(d => d.funderId === funder.id);
+            const funderReduction = distribution ? distribution.amount : 0;
+            return { ...funder, principal_balance: funder.principal_balance - funderReduction };
         });
-    };
+        const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
+        const finalFunders = totalPrincipal > 0
+            ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))
+            : updatedFunders.map(f => ({ ...f, pct_owned: 0 }));
+
+        updateProspectData(loanId, {
+            terms: { ...loan.terms, principal_balance: newPrincipalBalance },
+            funders: finalFunders,
+            history: [...(loan.history || []), newHistoryEvent],
+        });
+    }, [prospects, updateProspectData]);
 
     const uploadPropertyPhoto = async (prospectId: string, propertyId: string, file: File): Promise<void> => {
         const prospect = prospects.find(p => p.id === prospectId);
@@ -433,15 +431,13 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
             storage_path: filePath,
         };
 
-        handleProspectUpdate(prospectId, p => {
-            const updatedProperties = p.properties?.map(prop => {
-                if (prop.id === propertyId) {
-                    return { ...prop, photos: [...(prop.photos || []), newPhoto] };
-                }
-                return prop;
-            });
-            return { ...p, properties: updatedProperties };
+        const updatedProperties = prospect.properties?.map(prop => {
+            if (prop.id === propertyId) {
+                return { ...prop, photos: [...(prop.photos || []), newPhoto] };
+            }
+            return prop;
         });
+        await updateProspectData(prospectId, { properties: updatedProperties });
     };
 
     const deletePropertyPhoto = async (prospectId: string, propertyId: string, photo: PropertyPhoto): Promise<void> => {
@@ -451,15 +447,16 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
             throw deleteError;
         }
 
-        handleProspectUpdate(prospectId, p => {
-            const updatedProperties = p.properties?.map(prop => {
-                if (prop.id === propertyId) {
-                    return { ...prop, photos: (prop.photos || []).filter(ph => ph.id !== photo.id) };
-                }
-                return prop;
-            });
-            return { ...p, properties: updatedProperties };
+        const prospect = prospects.find(p => p.id === prospectId);
+        if (!prospect) return;
+
+        const updatedProperties = prospect.properties?.map(prop => {
+            if (prop.id === propertyId) {
+                return { ...prop, photos: (prop.photos || []).filter(ph => ph.id !== photo.id) };
+            }
+            return prop;
         });
+        await updateProspectData(prospectId, { properties: updatedProperties });
     };
     
     const value = { 
