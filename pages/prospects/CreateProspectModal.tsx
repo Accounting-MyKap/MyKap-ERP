@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import { UserProfile, Prospect } from './types';
 import { AddIcon } from '../../components/icons';
@@ -17,10 +17,31 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [loanAmount, setLoanAmount] = useState<number | ''>('');
+    const [loanAmountDisplay, setLoanAmountDisplay] = useState('');
     const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
     const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
     const [assignedTo, setAssignedTo] = useState('');
     const [error, setError] = useState('');
+
+    // Reset form state when modal is closed to ensure it's fresh on reopen
+    useEffect(() => {
+        if (!isOpen) {
+            // A small delay can prevent flickering as the modal closes
+            setTimeout(() => {
+                setBorrowerName('');
+                setProspectCode('');
+                setEmail('');
+                setPhone('');
+                setLoanAmount('');
+                setLoanAmountDisplay('');
+                setBorrowerType('individual');
+                setLoanType('purchase');
+                setAssignedTo('');
+                setError('');
+            }, 150);
+        }
+    }, [isOpen]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,16 +61,7 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
             assigned_to: assignedTo,
         });
 
-        // Reset form and close
-        setBorrowerName('');
-        setProspectCode('');
-        setEmail('');
-        setPhone('');
-        setLoanAmount('');
-        setBorrowerType('individual');
-        setLoanType('purchase');
-        setAssignedTo('');
-        setError('');
+        // Form reset is now handled by useEffect. Just close the modal.
         onClose();
     };
 
@@ -80,10 +92,22 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                             type="text"
                             inputMode="decimal"
                             id="loanAmount"
-                            value={loanAmount === '' ? '' : formatNumber(loanAmount)}
+                            value={loanAmountDisplay}
                             onChange={e => {
-                                const parsed = parseCurrency(e.target.value);
+                                const value = e.target.value;
+                                // Directly set display value to what user types for natural input feel
+                                setLoanAmountDisplay(value);
+                                // Parse it for the numeric state
+                                const parsed = parseCurrency(value);
                                 setLoanAmount(parsed === 0 ? '' : parsed);
+                            }}
+                            onBlur={() => {
+                                // Format the number on blur for a clean display
+                                if (loanAmount) {
+                                    setLoanAmountDisplay(formatNumber(loanAmount));
+                                } else {
+                                    setLoanAmountDisplay('');
+                                }
                             }}
                             className="input-field input-field-with-adornment-left text-right"
                             placeholder="250,000" />

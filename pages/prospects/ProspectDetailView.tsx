@@ -49,8 +49,6 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = (props) => {
 
     const renderSection = () => {
         switch (activeSection) {
-            case 'info':
-                return <ProspectInfoSection prospect={prospect} users={props.users} onUpdate={onUpdateProspect} />;
             case 'terms':
                 return <TermsSection loan={prospect} onUpdate={(data) => onUpdateProspect({ id: prospect.id, ...data })} />;
             case 'properties':

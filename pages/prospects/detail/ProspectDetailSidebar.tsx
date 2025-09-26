@@ -2,7 +2,7 @@
 import React from 'react';
 import { BorrowerIcon, TermsIcon, FundingIcon, PropertiesIcon, HistoryIcon, DocumentsIcon } from '../../../components/icons';
 
-export type Section = 'info' | 'borrower' | 'terms' | 'funding' | 'properties' | 'history' | 'stages';
+export type Section = 'borrower' | 'terms' | 'funding' | 'properties' | 'history' | 'stages';
 export type SubSection = 'co-borrowers';
 
 interface ProspectDetailSidebarProps {
@@ -50,7 +50,6 @@ const SubNavItem: React.FC<{
 const ProspectDetailSidebar: React.FC<ProspectDetailSidebarProps> = ({ activeSection, activeSubSection, onSelect }) => {
     
     const navItems: { name: Section, label: string, icon: React.ElementType, subsections?: { name: SubSection, label: string }[] }[] = [
-        { name: 'info', label: 'Info', icon: BorrowerIcon },
         { name: 'borrower', label: 'Borrower', icon: BorrowerIcon, subsections: [{ name: 'co-borrowers', label: 'Co-Borrowers' }] },
         { name: 'terms', label: 'Terms', icon: TermsIcon },
         { name: 'properties', label: 'Properties', icon: PropertiesIcon },
