@@ -40,7 +40,11 @@ const ProspectsPage: React.FC = () => {
     // is always fresh without needing a problematic useEffect for synchronization.
     const selectedProspect = prospects.find(p => p.id === selectedProspectId) || null;
 
+    console.log(`%c[LOG 11 - ProspectsPage]`, 'color: #ff9800; font-weight: bold;', 'Component re-rendering.', { selectedProspectId, selectedProspectName: selectedProspect?.borrower_name });
+
+
     const handleSelectProspect = (prospect: Prospect) => {
+        console.log(`%c[LOG 12 - ProspectsPage]`, 'color: #ff9800; font-weight: bold;', 'handleSelectProspect called.', { prospectId: prospect.id, prospectName: prospect.borrower_name });
         setSelectedProspectId(prospect.id);
     };
 

@@ -179,6 +179,8 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
      * It handles optimistic updates, error rollbacks, and ensures only changed data is sent.
      */
     const updateProspectData = useCallback(async (prospectId: string, updatePayload: Partial<Prospect>) => {
+        console.log(`%c[LOG 4 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'updateProspectData called.', { prospectId, updatePayload });
+
         // If the assigned user is changing, find the new name and add it to the payload.
         if (updatePayload.assigned_to && users) {
             const assignedUser = users.find(u => u.id === updatePayload.assigned_to);
@@ -194,9 +196,13 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         // Optimistically update the UI for a responsive feel.
         const optimisticallyUpdated = { ...originalProspect, ...updatePayload };
+        console.log(`%c[LOG 5 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Performing optimistic update on UI state.');
         setProspects(prev => prev.map(p => p.id === prospectId ? optimisticallyUpdated : p));
+        console.log(`%c[LOG 6 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Optimistic update complete.');
+
 
         // Send only the changed fields to Supabase.
+        console.log(`%c[LOG 7 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Sending update to Supabase...');
         const { data, error } = await supabase
             .from('prospects')
             .update(updatePayload)
@@ -205,15 +211,18 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
             .single();
 
         if (error) {
-            console.error('Error updating prospect:', error);
+            console.error(`%c[LOG 8 FAILED - ProspectsContext]`, 'color: #f44336; font-weight: bold;', 'Supabase update failed. Reverting optimistic update.', error);
             // If the update fails, revert the UI to the original state.
             setProspects(prev => prev.map(p => p.id === prospectId ? originalProspect : p));
             throw error; // Propagate the error to the calling component.
         }
 
         if (data) {
+            console.log(`%c[LOG 8 SUCCESS - ProspectsContext]`, 'color: #28a745; font-weight: bold;', 'Supabase update successful. Received data:', data);
+            console.log(`%c[LOG 9 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Syncing final state from database.');
             // Sync the UI with the final, confirmed state from the database.
             setProspects(prev => prev.map(p => p.id === prospectId ? data : p));
+            console.log(`%c[LOG 10 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Final state sync complete.');
         }
     }, [prospects, users]);
 

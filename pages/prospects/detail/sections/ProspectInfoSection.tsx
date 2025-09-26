@@ -1,4 +1,5 @@
 
+
 // pages/prospects/detail/sections/ProspectInfoSection.tsx
 import React, { useState, useEffect } from 'react';
 import { Prospect, UserProfile } from '../../types';
@@ -57,9 +58,10 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
     };
 
     const handleSave = async () => {
+        console.log(`%c[LOG 1 - ProspectInfoSection]`, 'color: #9c27b0; font-weight: bold;', 'handleSave initiated.');
         setIsSaving(true);
         try {
-            await onUpdate({
+            const payload = {
                 id: prospect.id,
                 borrower_name: borrowerName,
                 prospect_code: prospectCode,
@@ -69,14 +71,20 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
                 borrower_type: borrowerType,
                 loan_type: loanType,
                 assigned_to: assignedTo,
-            });
+            };
+            console.log(`%c[LOG 2 - ProspectInfoSection]`, 'color: #9c27b0; font-weight: bold;', 'Calling onUpdate with payload:', payload);
+            await onUpdate(payload);
+            console.log(`%c[LOG 3 - ProspectInfoSection]`, 'color: #9c27b0; font-weight: bold;', 'onUpdate call finished successfully.');
             showToast('Changes saved successfully!', 'success');
         } catch (error: any) {
+            console.error(`%c[LOG 3 FAILED - ProspectInfoSection]`, 'color: #f44336; font-weight: bold;', 'onUpdate call failed.', error);
             showToast(`Error: ${error.message || 'Could not save changes.'}`, 'error');
         } finally {
             setIsSaving(false);
+            console.log(`%c[LOG 3.1 - ProspectInfoSection]`, 'color: #9c27b0; font-weight: bold;', 'handleSave finished.');
         }
     };
+
 
     return (
         <div className="space-y-6">
