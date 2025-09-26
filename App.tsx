@@ -16,12 +16,24 @@ import UsersPage from './pages/users/UsersPage';
 import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ui/ToastContainer';
 
-// A custom component to protect routes that require authentication.
-const ProtectedRoute: React.FC = () => {
+// A layout component to provide context to authenticated routes.
+// It does not consume auth context itself, so it won't re-render on auth state changes.
+const ProtectedLayout: React.FC = () => {
+  return (
+    <ProspectsProvider>
+      <Outlet />
+    </ProspectsProvider>
+  );
+};
+
+// A guard component that checks for authentication.
+// It consumes auth context and will re-render, but it only contains logic,
+// not providers, so re-mounting providers is avoided.
+const AuthGuard: React.FC = () => {
   const { session, loading } = useAuth();
 
   if (loading) {
-    // Optionally, show a loading spinner while checking auth state
+    // Show a loading spinner while checking auth state
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
@@ -29,14 +41,9 @@ const ProtectedRoute: React.FC = () => {
     // If there's no session, redirect to the login page
     return <Navigate to="/login" replace />;
   }
-
-  // If session exists, wrap the child routes in the ProspectsProvider
-  // to provide a single, shared state for all prospect/loan data.
-  return (
-    <ProspectsProvider>
-      <Outlet />
-    </ProspectsProvider>
-  );
+  
+  // If session exists, render the nested routes (which will include the ProtectedLayout).
+  return <Outlet />;
 };
 
 
@@ -46,23 +53,27 @@ const App: React.FC = () => {
       <Router>
         <AuthProvider>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-
+            
             {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/prospects" element={<ProspectsPage />} />
-              <Route path="/loans" element={<LoansPage />} />
-              <Route path="/loans/:loanId" element={<LoanDetailPage />} />
-              <Route path="/lenders" element={<LendersPage />} />
-              <Route path="/lenders/new" element={<LenderDetailPage />} />
-              <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/users" element={<UsersPage />} />
-              {/* Redirect root to dashboard if logged in */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route element={<AuthGuard />}>
+              <Route element={<ProtectedLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/prospects" element={<ProspectsPage />} />
+                <Route path="/loans" element={<LoansPage />} />
+                <Route path="/loans/:loanId" element={<LoanDetailPage />} />
+                <Route path="/lenders" element={<LendersPage />} />
+                <Route path="/lenders/new" element={<LenderDetailPage />} />
+                <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/users" element={<UsersPage />} />
+                {/* Redirect root to dashboard if logged in */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              </Route>
             </Route>
+            
           </Routes>
         </AuthProvider>
       </Router>
