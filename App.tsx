@@ -13,6 +13,8 @@ import LendersPage from './pages/lenders/LendersPage';
 import SettingsPage from './pages/SettingsPage';
 import LenderDetailPage from './pages/lenders/detail/LenderDetailPage';
 import UsersPage from './pages/users/UsersPage';
+import { ToastProvider } from './contexts/ToastContext';
+import ToastContainer from './components/ui/ToastContainer';
 
 // A custom component to protect routes that require authentication.
 const ProtectedRoute: React.FC = () => {
@@ -40,29 +42,32 @@ const ProtectedRoute: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+    <ToastProvider>
+      <Router>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/prospects" element={<ProspectsPage />} />
-            <Route path="/loans" element={<LoansPage />} />
-            <Route path="/loans/:loanId" element={<LoanDetailPage />} />
-            <Route path="/lenders" element={<LendersPage />} />
-            <Route path="/lenders/new" element={<LenderDetailPage />} />
-            <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/users" element={<UsersPage />} />
-            {/* Redirect root to dashboard if logged in */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          </Route>
-        </Routes>
-      </AuthProvider>
-    </Router>
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/prospects" element={<ProspectsPage />} />
+              <Route path="/loans" element={<LoansPage />} />
+              <Route path="/loans/:loanId" element={<LoanDetailPage />} />
+              <Route path="/lenders" element={<LendersPage />} />
+              <Route path="/lenders/new" element={<LenderDetailPage />} />
+              <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              {/* Redirect root to dashboard if logged in */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </Router>
+      <ToastContainer />
+    </ToastProvider>
   );
 };
 

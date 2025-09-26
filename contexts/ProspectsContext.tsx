@@ -215,6 +215,7 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
         if (error) {
             console.error('Error updating prospect:', error);
             syncProspect(originalProspect); // Revert on error
+            throw error; // Re-throw the error to be caught by the calling component
         } else if (data) {
             syncProspect(data); // Sync with final DB state
         }

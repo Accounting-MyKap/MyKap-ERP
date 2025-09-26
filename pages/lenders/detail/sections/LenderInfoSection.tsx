@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Lender, Address } from '../../../prospects/types';
+import { useToast } from '../../../../hooks/useToast';
 
 interface LenderInfoSectionProps {
     lender: Lender;
-    onUpdate: (lenderId: string, updatedData: Partial<Lender>) => void;
+    onUpdate: (lenderId: string, updatedData: Partial<Lender>) => Promise<void>;
 }
 
 const LenderInfoSection: React.FC<LenderInfoSectionProps> = ({ lender, onUpdate }) => {
@@ -12,6 +13,8 @@ const LenderInfoSection: React.FC<LenderInfoSectionProps> = ({ lender, onUpdate 
         lender_name: lender.lender_name || '',
         address: lender.address || {},
     });
+    const [isSaving, setIsSaving] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
         setFormData({
@@ -37,9 +40,16 @@ const LenderInfoSection: React.FC<LenderInfoSectionProps> = ({ lender, onUpdate 
         }));
     };
 
-    const handleSave = () => {
-        onUpdate(lender.id, formData);
-        alert('Changes saved!');
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await onUpdate(lender.id, formData);
+            showToast('Lender information saved successfully!', 'success');
+        } catch (error: any) {
+            showToast(`Error: ${error.message || 'Could not save changes.'}`, 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -77,8 +87,12 @@ const LenderInfoSection: React.FC<LenderInfoSectionProps> = ({ lender, onUpdate 
                 </div>
             </div>
             <div className="pt-4 flex justify-end">
-                <button onClick={handleSave} className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
-                    Save Changes
+                <button 
+                    onClick={handleSave} 
+                    disabled={isSaving}
+                    className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
         </div>

@@ -12,7 +12,8 @@ import { ReopenIcon, GenerateDocsIcon } from '../../components/icons';
 interface ProspectDetailViewProps {
     prospect: Prospect | null;
     users: UserProfile[];
-    onUpdateProspect: (prospectData: Partial<Prospect> & { id: string }) => void;
+    // FIX: Changed onUpdateProspect to return Promise<void> to match the async nature of the update function.
+    onUpdateProspect: (prospectData: Partial<Prospect> & { id: string }) => Promise<void>;
     onUpdateDocumentStatus: (prospectId: string, stageId: number, docId: string, applicantType: ApplicantType, newStatus: DocumentStatus) => void;
     onUpdateClosingDocumentStatus: (prospectId: string, stageId: number, docId: string, key: ClosingDocStatusKey, value: boolean) => void;
     onAddDocument: (prospectId: string, stageId: number, applicantType: ApplicantType, docName: string) => void;

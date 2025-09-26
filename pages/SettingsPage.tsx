@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import Header from '../components/Header';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 
 const SettingsPage: React.FC = () => {
     const { profile, updateProfile, loading: authLoading } = useAuth();
@@ -13,7 +14,8 @@ const SettingsPage: React.FC = () => {
         phone_number: '',
     });
     const [isSaving, setIsSaving] = useState(false);
-    const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const { showToast } = useToast();
+
 
     useEffect(() => {
         if (profile) {
@@ -35,7 +37,6 @@ const SettingsPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        setNotification(null);
 
         try {
             const updatedProfileData = {
@@ -49,19 +50,14 @@ const SettingsPage: React.FC = () => {
             const { error } = await updateProfile(updatedProfileData);
     
             if (error) {
-                setNotification({ type: 'error', message: `Error updating profile: ${error.message}` });
-            } else {
-                setNotification({ type: 'success', message: 'Profile updated successfully!' });
+                throw error;
             }
-        } catch (err) {
+            showToast('Profile updated successfully!', 'success');
+        } catch (err: any) {
             console.error(err);
-            setNotification({ type: 'error', message: 'An unexpected error occurred.' });
+            showToast(err.message || 'An unexpected error occurred.', 'error');
         } finally {
             setIsSaving(false);
-            // Clear the notification after 3 seconds for a better user experience
-            setTimeout(() => {
-                setNotification(null);
-            }, 3000);
         }
     };
 
@@ -103,11 +99,6 @@ const SettingsPage: React.FC = () => {
                     </div>
 
                     <div className="mt-8 border-t pt-6 flex items-center justify-end">
-                        {notification && (
-                            <div className={`mr-4 text-sm ${notification.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                                {notification.message}
-                            </div>
-                        )}
                         <button
                             type="submit"
                             disabled={isSaving}

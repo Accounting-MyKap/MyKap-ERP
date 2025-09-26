@@ -62,6 +62,7 @@ export const useLenders = () => {
             console.error("Error updating lender:", error);
             // Revert on error
             setLenders(prev => prev.map(l => l.id === lenderId ? originalLender : l));
+            throw error;
         } else if(data) {
             // Sync with DB state
             setLenders(prev => prev.map(l => l.id === lenderId ? data : l));

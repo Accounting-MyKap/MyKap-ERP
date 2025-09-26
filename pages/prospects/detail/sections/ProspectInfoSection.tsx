@@ -2,16 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { Prospect, UserProfile } from '../../types';
 import { formatNumber, parseCurrency } from '../../../../utils/formatters';
+import { useToast } from '../../../../hooks/useToast';
 
 interface ProspectInfoSectionProps {
     prospect: Prospect;
     users: UserProfile[];
-    onUpdate: (prospectData: Partial<Prospect> & { id: string }) => void;
+    onUpdate: (prospectData: Partial<Prospect> & { id: string }) => Promise<void>;
 }
 
 const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, users, onUpdate }) => {
     const [formData, setFormData] = useState({ ...prospect });
     const [loanAmountDisplay, setLoanAmountDisplay] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
         setFormData({ ...prospect });
@@ -30,19 +33,26 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
         setFormData(prev => ({ ...prev, loan_amount: numericValue }));
     };
 
-    const handleSave = () => {
-        onUpdate({
-            id: prospect.id,
-            borrower_name: formData.borrower_name,
-            prospect_code: formData.prospect_code,
-            email: formData.email,
-            phone_number: formData.phone_number,
-            loan_amount: formData.loan_amount,
-            borrower_type: formData.borrower_type,
-            loan_type: formData.loan_type,
-            assigned_to: formData.assigned_to,
-        });
-        alert('Prospect information updated!');
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await onUpdate({
+                id: prospect.id,
+                borrower_name: formData.borrower_name,
+                prospect_code: formData.prospect_code,
+                email: formData.email,
+                phone_number: formData.phone_number,
+                loan_amount: formData.loan_amount,
+                borrower_type: formData.borrower_type,
+                loan_type: formData.loan_type,
+                assigned_to: formData.assigned_to,
+            });
+            showToast('Changes saved successfully!', 'success');
+        } catch (error: any) {
+            showToast(`Error: ${error.message || 'Could not save changes.'}`, 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -96,9 +106,13 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
                     </div>
                 </div>
             </div>
-            <div className="pt-4 flex justify-end">
-                <button onClick={handleSave} className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
-                    Save Changes
+            <div className="pt-4 flex justify-end items-center">
+                <button 
+                    onClick={handleSave} 
+                    disabled={isSaving}
+                    className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
         </div>

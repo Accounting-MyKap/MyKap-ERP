@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Prospect, BorrowerDetails } from '../../../prospects/types';
+import { useToast } from '../../../../hooks/useToast';
 
 interface BorrowerSectionProps {
     loan: Prospect;
-    onUpdate: (updatedData: { borrower_details: BorrowerDetails }) => void;
+    onUpdate: (updatedData: { borrower_details: BorrowerDetails }) => Promise<void>;
 }
 
 const BorrowerSection: React.FC<BorrowerSectionProps> = ({ loan, onUpdate }) => {
     const [details, setDetails] = useState<BorrowerDetails>(loan.borrower_details || {});
+    const [isSaving, setIsSaving] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
         setDetails(loan.borrower_details || {});
@@ -29,8 +32,16 @@ const BorrowerSection: React.FC<BorrowerSectionProps> = ({ loan, onUpdate }) => 
         }));
     };
 
-    const handleSave = () => {
-        onUpdate({ borrower_details: details });
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await onUpdate({ borrower_details: details });
+            showToast('Borrower details saved successfully!', 'success');
+        } catch (error: any) {
+            showToast(`Error: ${error.message || 'Could not save changes.'}`, 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -93,8 +104,12 @@ const BorrowerSection: React.FC<BorrowerSectionProps> = ({ loan, onUpdate }) => 
             </div>
 
             <div className="pt-4 flex justify-end">
-                <button onClick={handleSave} className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
-                    Save Changes
+                <button 
+                    onClick={handleSave} 
+                    disabled={isSaving}
+                    className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
         </div>

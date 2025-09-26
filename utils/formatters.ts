@@ -36,8 +36,21 @@ export const parseCurrency = (value: string | number): number => {
         return value;
     }
     if (typeof value === 'string') {
-        // Remove everything that is not a digit or a decimal point.
-        const numericString = value.replace(/[^0-9.]/g, '');
+        // 1. Remove any character that is not a digit, a comma, or a period.
+        const sanitized = value.replace(/[^0-9.,]/g, '');
+        
+        // 2. Remove commas used for thousand separators.
+        const withoutCommas = sanitized.replace(/,/g, '');
+
+        // 3. Robustly handle multiple decimal points.
+        //    - Split the string by the period.
+        //    - The first part is the integer part.
+        //    - Join all subsequent parts to form the decimal part.
+        const parts = withoutCommas.split('.');
+        const numericString = parts.length > 1
+            ? parts[0] + '.' + parts.slice(1).join('')
+            : parts[0];
+            
         const number = parseFloat(numericString);
         return isNaN(number) ? 0 : number;
     }

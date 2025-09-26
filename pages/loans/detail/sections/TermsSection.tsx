@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Prospect, LoanTerms } from '../../../prospects/types';
 import { formatNumber, parseCurrency } from '../../../../utils/formatters';
+import { useToast } from '../../../../hooks/useToast';
 
 interface TermsSectionProps {
     loan: Prospect;
-    onUpdate: (updatedData: { terms: LoanTerms }) => void;
+    onUpdate: (updatedData: { terms: LoanTerms }) => Promise<void>;
 }
 
 const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
     const [terms, setTerms] = useState<Partial<LoanTerms & { note_rate: number | '' }>>({});
+    const [isSaving, setIsSaving] = useState(false);
+    const { showToast } = useToast();
 
      useEffect(() => {
         if (loan.terms) {
@@ -33,13 +36,21 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
         }
     };
 
-    const handleSave = () => {
-        const termsToSave: Partial<LoanTerms> = {
-            ...terms,
-            // Convert percentage from input back to decimal for saving
-            note_rate: (Number(terms.note_rate) || 0) / 100,
-        };
-        onUpdate({ terms: termsToSave as LoanTerms });
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const termsToSave: Partial<LoanTerms> = {
+                ...terms,
+                // Convert percentage from input back to decimal for saving
+                note_rate: (Number(terms.note_rate) || 0) / 100,
+            };
+            await onUpdate({ terms: termsToSave as LoanTerms });
+            showToast('Loan terms saved successfully!', 'success');
+        } catch (error: any) {
+            showToast(`Error: ${error.message || 'Could not save changes.'}`, 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -107,8 +118,12 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                 </div>
             </div>
              <div className="pt-4 flex justify-end">
-                <button onClick={handleSave} className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700">
-                    Save Changes
+                <button 
+                    onClick={handleSave} 
+                    disabled={isSaving}
+                    className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
         </div>

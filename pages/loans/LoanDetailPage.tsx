@@ -47,7 +47,7 @@ const LoanDetailPage: React.FC = () => {
     }, [prospects, loan]);
 
 
-    const handleUpdateLoan = (updatedData: Partial<Prospect>) => {
+    const handleUpdateLoan = async (updatedData: Partial<Prospect>) => {
         if (loan) {
             // Correctly deduct from lender trust balance when a new funding event occurs
             const oldHistory = loan.history || [];
@@ -71,7 +71,7 @@ const LoanDetailPage: React.FC = () => {
 
             const updatedLoan = { ...loan, ...updatedData };
             setLoan(updatedLoan); // Optimistic update
-            updateProspect({ id: loan.id, ...updatedData });
+            await updateProspect({ id: loan.id, ...updatedData });
         }
     };
     
