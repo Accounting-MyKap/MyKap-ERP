@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Header from '../../components/Header';
 import ProspectsHeader from './ProspectsHeader';
@@ -30,28 +30,18 @@ const ProspectsPage: React.FC = () => {
     } = useProspects();
 
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-    const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+    // CRITICAL FIX: Store only the ID of the selected prospect, not the whole object.
+    // This prevents the re-render loop caused by object reference changes.
+    const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // This effect ensures that the detailed view always shows the latest data
-    // after any updates (like editing from a modal).
-    useEffect(() => {
-        if (selectedProspect) {
-            const freshProspectData = prospects.find(p => p.id === selectedProspect.id);
-            if (freshProspectData) {
-                // To avoid re-renders if the object is identical
-                if (JSON.stringify(freshProspectData) !== JSON.stringify(selectedProspect)) {
-                    setSelectedProspect(freshProspectData);
-                }
-            } else {
-                // The prospect was deleted, clear the selection
-                setSelectedProspect(null);
-            }
-        }
-    }, [prospects, selectedProspect]);
+    // DERIVED STATE: The full selected prospect object is now derived directly from the
+    // master prospects list and the selected ID on every render. This ensures the data
+    // is always fresh without needing a problematic useEffect for synchronization.
+    const selectedProspect = prospects.find(p => p.id === selectedProspectId) || null;
 
     const handleSelectProspect = (prospect: Prospect) => {
-        setSelectedProspect(prospect);
+        setSelectedProspectId(prospect.id);
     };
 
     return (
@@ -72,7 +62,7 @@ const ProspectsPage: React.FC = () => {
                             filter={activeFilter}
                             loading={loading}
                             onSelectProspect={handleSelectProspect}
-                            selectedProspectId={selectedProspect?.id}
+                            selectedProspectId={selectedProspectId}
                        />
                     </div>
                     <div className="lg:col-span-2">
