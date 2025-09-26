@@ -1,3 +1,4 @@
+// pages/SettingsPage.tsx
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import Header from '../components/Header';
@@ -6,33 +7,29 @@ import { useToast } from '../hooks/useToast';
 
 const SettingsPage: React.FC = () => {
     const { profile, updateProfile, loading: authLoading } = useAuth();
-    const [formData, setFormData] = useState({
-        first_name: '',
-        middle_name: '',
-        last_name: '',
-        second_surname: '',
-        phone_number: '',
-    });
+    
+    // State is now managed per-field to prevent unstable re-render cycles.
+    const [firstName, setFirstName] = useState('');
+    const [middleName, setMiddleName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [secondSurname, setSecondSurname] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
 
 
+    // This effect now syncs the form state ONLY when the profile object from context changes.
     useEffect(() => {
         if (profile) {
-            setFormData({
-                first_name: profile.first_name || '',
-                middle_name: profile.middle_name || '',
-                last_name: profile.last_name || '',
-                second_surname: profile.second_surname || '',
-                phone_number: profile.phone_number || '',
-            });
+            setFirstName(profile.first_name || '');
+            setMiddleName(profile.middle_name || '');
+            setLastName(profile.last_name || '');
+            setSecondSurname(profile.second_surname || '');
+            setPhoneNumber(profile.phone_number || '');
         }
     }, [profile]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,11 +37,11 @@ const SettingsPage: React.FC = () => {
 
         try {
             const updatedProfileData = {
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                middle_name: formData.middle_name || null,
-                second_surname: formData.second_surname || null,
-                phone_number: formData.phone_number || null,
+                first_name: firstName,
+                last_name: lastName,
+                middle_name: middleName || null,
+                second_surname: secondSurname || null,
+                phone_number: phoneNumber || null,
             };
     
             const { error } = await updateProfile(updatedProfileData);
@@ -78,23 +75,23 @@ const SettingsPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                            <input type="text" name="first_name" id="first_name" value={formData.first_name} onChange={handleInputChange} className="input-field" required />
+                            <input type="text" name="first_name" id="first_name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="input-field" required />
                         </div>
                         <div>
                             <label htmlFor="middle_name" className="block text-sm font-medium text-gray-700 mb-1">Middle Name (Optional)</label>
-                            <input type="text" name="middle_name" id="middle_name" value={formData.middle_name} onChange={handleInputChange} className="input-field" />
+                            <input type="text" name="middle_name" id="middle_name" value={middleName} onChange={(e) => setMiddleName(e.target.value)} className="input-field" />
                         </div>
                         <div>
                             <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                            <input type="text" name="last_name" id="last_name" value={formData.last_name} onChange={handleInputChange} className="input-field" required />
+                            <input type="text" name="last_name" id="last_name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="input-field" required />
                         </div>
                         <div>
                             <label htmlFor="second_surname" className="block text-sm font-medium text-gray-700 mb-1">Second Surname</label>
-                            <input type="text" name="second_surname" id="second_surname" value={formData.second_surname} onChange={handleInputChange} className="input-field" />
+                            <input type="text" name="second_surname" id="second_surname" value={secondSurname} onChange={(e) => setSecondSurname(e.target.value)} className="input-field" />
                         </div>
                         <div className="md:col-span-2">
                             <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                            <input type="tel" name="phone_number" id="phone_number" value={formData.phone_number} onChange={handleInputChange} className="input-field" />
+                            <input type="tel" name="phone_number" id="phone_number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="input-field" />
                         </div>
                     </div>
 

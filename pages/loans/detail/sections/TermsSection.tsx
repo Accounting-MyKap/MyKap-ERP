@@ -1,3 +1,4 @@
+// pages/loans/detail/sections/TermsSection.tsx
 import React, { useState, useEffect } from 'react';
 import { Prospect, LoanTerms } from '../../../prospects/types';
 import { formatNumber, parseCurrency } from '../../../../utils/formatters';
@@ -9,40 +10,44 @@ interface TermsSectionProps {
 }
 
 const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
-    const [terms, setTerms] = useState<Partial<LoanTerms & { note_rate: number | '' }>>({});
+    // State is now managed per-field to prevent unstable re-render cycles.
+    const [originalAmount, setOriginalAmount] = useState<number | undefined>();
+    const [noteRate, setNoteRate] = useState<number | ''>('');
+    const [loanTermMonths, setLoanTermMonths] = useState<number | undefined>();
+    const [principalBalance, setPrincipalBalance] = useState<number | undefined>();
+    const [trustBalance, setTrustBalance] = useState<number | undefined>();
+    const [monthlyPayment, setMonthlyPayment] = useState<number | undefined>();
+    const [closingDate, setClosingDate] = useState<string | undefined>();
+    const [maturityDate, setMaturityDate] = useState<string | undefined>();
+
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
 
+     // This effect now syncs the form state ONLY when the selected loan changes.
      useEffect(() => {
-        if (loan.terms) {
-            setTerms({
-                ...loan.terms,
-                // Convert decimal to percentage for display in input
-                note_rate: (loan.terms.note_rate || 0) * 100,
-            });
-        } else {
-            setTerms({})
-        }
+        const terms = loan.terms || {};
+        setOriginalAmount(terms.original_amount);
+        setNoteRate((terms.note_rate || 0) * 100);
+        setLoanTermMonths(terms.loan_term_months);
+        setPrincipalBalance(terms.principal_balance);
+        setTrustBalance(terms.trust_balance);
+        setMonthlyPayment(terms.monthly_payment);
+        setClosingDate(terms.closing_date);
+        setMaturityDate(terms.maturity_date);
     }, [loan]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        if (['original_amount', 'principal_balance', 'trust_balance', 'monthly_payment'].includes(name)) {
-            const parsedValue = parseCurrency(value);
-            setTerms(prev => ({ ...prev, [name]: parsedValue === 0 ? undefined : parsedValue }));
-        } else {
-            const parsedValue = value === '' ? '' : parseFloat(value) || 0;
-            setTerms(prev => ({ ...prev, [name]: parsedValue }));
-        }
-    };
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
             const termsToSave: Partial<LoanTerms> = {
-                ...terms,
-                // Convert percentage from input back to decimal for saving
-                note_rate: (Number(terms.note_rate) || 0) / 100,
+                original_amount: originalAmount,
+                note_rate: (Number(noteRate) || 0) / 100, // Convert percentage back to decimal
+                loan_term_months: loanTermMonths,
+                principal_balance: principalBalance,
+                trust_balance: trustBalance,
+                monthly_payment: monthlyPayment,
+                closing_date: closingDate,
+                maturity_date: maturityDate,
             };
             await onUpdate({ terms: termsToSave as LoanTerms });
             showToast('Loan terms saved successfully!', 'success');
@@ -64,19 +69,19 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                         <label htmlFor="original_amount" className="block text-sm font-medium text-gray-700">Original Amount</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="text" inputMode="decimal" id="original_amount" name="original_amount" value={formatNumber(terms.original_amount)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                            <input type="text" inputMode="decimal" id="original_amount" name="original_amount" value={formatNumber(originalAmount)} onChange={(e) => setOriginalAmount(parseCurrency(e.target.value))} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                     <div>
                         <label htmlFor="note_rate" className="block text-sm font-medium text-gray-700">Note Rate</label>
                          <div className="input-container mt-1">
-                            <input type="number" id="note_rate" name="note_rate" value={terms.note_rate || ''} onChange={handleChange} className="input-field input-field-with-adornment-right text-right" />
+                            <input type="number" id="note_rate" name="note_rate" value={noteRate} onChange={(e) => setNoteRate(e.target.value === '' ? '' : parseFloat(e.target.value))} className="input-field input-field-with-adornment-right text-right" />
                             <span className="input-adornment-right">%</span>
                         </div>
                     </div>
                     <div>
                         <label htmlFor="loan_term_months" className="block text-sm font-medium text-gray-700">Loan Term (months)</label>
-                        <input type="number" id="loan_term_months" name="loan_term_months" value={terms.loan_term_months || ''} onChange={handleChange} className="input-field mt-1 text-right" />
+                        <input type="number" id="loan_term_months" name="loan_term_months" value={loanTermMonths || ''} onChange={(e) => setLoanTermMonths(parseInt(e.target.value))} className="input-field mt-1 text-right" />
                     </div>
                 </div>
                 {/* Loan Balances */}
@@ -86,21 +91,21 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                         <label htmlFor="principal_balance" className="block text-sm font-medium text-gray-700">Principal Balance</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="text" inputMode="decimal" id="principal_balance" name="principal_balance" value={formatNumber(terms.principal_balance)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                            <input type="text" inputMode="decimal" id="principal_balance" name="principal_balance" value={formatNumber(principalBalance)} onChange={(e) => setPrincipalBalance(parseCurrency(e.target.value))} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                      <div>
                         <label htmlFor="trust_balance" className="block text-sm font-medium text-gray-700">Trust Balance</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="text" inputMode="decimal" id="trust_balance" name="trust_balance" value={formatNumber(terms.trust_balance)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                            <input type="text" inputMode="decimal" id="trust_balance" name="trust_balance" value={formatNumber(trustBalance)} onChange={(e) => setTrustBalance(parseCurrency(e.target.value))} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                     <div>
                         <label htmlFor="monthly_payment" className="block text-sm font-medium text-gray-700">Monthly Payment</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="text" inputMode="decimal" id="monthly_payment" name="monthly_payment" value={formatNumber(terms.monthly_payment)} onChange={handleChange} className="input-field input-field-with-adornment-left text-right" />
+                            <input type="text" inputMode="decimal" id="monthly_payment" name="monthly_payment" value={formatNumber(monthlyPayment)} onChange={(e) => setMonthlyPayment(parseCurrency(e.target.value))} className="input-field input-field-with-adornment-left text-right" />
                         </div>
                     </div>
                 </div>
@@ -109,11 +114,11 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-2">Important Dates</h4>
                     <div>
                         <label htmlFor="closing_date" className="block text-sm font-medium text-gray-700">Closing Date</label>
-                        <input type="date" id="closing_date" name="closing_date" value={terms.closing_date || ''} onChange={handleChange} className="input-field mt-1" />
+                        <input type="date" id="closing_date" name="closing_date" value={closingDate || ''} onChange={(e) => setClosingDate(e.target.value)} className="input-field mt-1" />
                     </div>
                      <div>
                         <label htmlFor="maturity_date" className="block text-sm font-medium text-gray-700">Maturity</label>
-                        <input type="date" id="maturity_date" name="maturity_date" value={terms.maturity_date || ''} onChange={handleChange} className="input-field mt-1" />
+                        <input type="date" id="maturity_date" name="maturity_date" value={maturityDate || ''} onChange={(e) => setMaturityDate(e.target.value)} className="input-field mt-1" />
                     </div>
                 </div>
             </div>

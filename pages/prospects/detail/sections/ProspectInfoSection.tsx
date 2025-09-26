@@ -1,3 +1,4 @@
+
 // pages/prospects/detail/sections/ProspectInfoSection.tsx
 import React, { useState, useEffect } from 'react';
 import { Prospect, UserProfile } from '../../types';
@@ -11,26 +12,46 @@ interface ProspectInfoSectionProps {
 }
 
 const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, users, onUpdate }) => {
-    const [formData, setFormData] = useState({ ...prospect });
+    // State is now managed per-field to avoid complex object state and re-render loops.
+    const [borrowerName, setBorrowerName] = useState('');
+    const [prospectCode, setProspectCode] = useState('');
+    const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [loanAmount, setLoanAmount] = useState<number>(0);
     const [loanAmountDisplay, setLoanAmountDisplay] = useState('');
+    const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
+    const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
+    const [assignedTo, setAssignedTo] = useState('');
+    
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
 
+    // This effect now ONLY syncs the form state when the user selects a DIFFERENT prospect.
+    // This is the key change that prevents the application freeze.
     useEffect(() => {
-        setFormData({ ...prospect });
-        setLoanAmountDisplay(formatNumber(prospect.loan_amount));
+        if (prospect) {
+            setBorrowerName(prospect.borrower_name || '');
+            setProspectCode(prospect.prospect_code || '');
+            setEmail(prospect.email || '');
+            setPhoneNumber(prospect.phone_number || '');
+            setLoanAmount(prospect.loan_amount || 0);
+            setLoanAmountDisplay(formatNumber(prospect.loan_amount));
+            setBorrowerType(prospect.borrower_type || 'individual');
+            setLoanType(prospect.loan_type || 'purchase');
+            setAssignedTo(prospect.assigned_to || '');
+        }
     }, [prospect]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
 
     const handleLoanAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const displayValue = e.target.value;
         const numericValue = parseCurrency(displayValue);
         setLoanAmountDisplay(displayValue);
-        setFormData(prev => ({ ...prev, loan_amount: numericValue }));
+        setLoanAmount(numericValue);
+    };
+    
+    const handleLoanAmountBlur = () => {
+        // Format the display value when the user clicks away.
+        setLoanAmountDisplay(formatNumber(loanAmount));
     };
 
     const handleSave = async () => {
@@ -38,14 +59,14 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
         try {
             await onUpdate({
                 id: prospect.id,
-                borrower_name: formData.borrower_name,
-                prospect_code: formData.prospect_code,
-                email: formData.email,
-                phone_number: formData.phone_number,
-                loan_amount: formData.loan_amount,
-                borrower_type: formData.borrower_type,
-                loan_type: formData.loan_type,
-                assigned_to: formData.assigned_to,
+                borrower_name: borrowerName,
+                prospect_code: prospectCode,
+                email: email,
+                phone_number: phoneNumber,
+                loan_amount: loanAmount,
+                borrower_type: borrowerType,
+                loan_type: loanType,
+                assigned_to: assignedTo,
             });
             showToast('Changes saved successfully!', 'success');
         } catch (error: any) {
@@ -61,30 +82,38 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label htmlFor="borrower_name" className="block text-sm font-medium text-gray-700">Borrower Name</label>
-                    <input type="text" id="borrower_name" name="borrower_name" value={formData.borrower_name} onChange={handleChange} className="input-field mt-1" />
+                    <input type="text" id="borrower_name" value={borrowerName} onChange={(e) => setBorrowerName(e.target.value)} className="input-field mt-1" />
                 </div>
                 <div>
                     <label htmlFor="prospect_code" className="block text-sm font-medium text-gray-700">Account</label>
-                    <input type="text" id="prospect_code" name="prospect_code" value={formData.prospect_code || ''} onChange={handleChange} className="input-field mt-1" />
+                    <input type="text" id="prospect_code" value={prospectCode} onChange={(e) => setProspectCode(e.target.value)} className="input-field mt-1" />
                 </div>
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} className="input-field mt-1" />
+                    <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-field mt-1" />
                 </div>
                 <div>
                     <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input type="tel" id="phone_number" name="phone_number" value={formData.phone_number} onChange={handleChange} className="input-field mt-1" />
+                    <input type="tel" id="phone_number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="input-field mt-1" />
                 </div>
                 <div>
                     <label htmlFor="loan_amount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
                     <div className="input-container mt-1">
                         <span className="input-adornment">$</span>
-                        <input type="text" inputMode="decimal" id="loan_amount" name="loan_amount" value={loanAmountDisplay} onChange={handleLoanAmountChange} className="input-field input-field-with-adornment-left text-right" />
+                        <input 
+                            type="text" 
+                            inputMode="decimal" 
+                            id="loan_amount" 
+                            value={loanAmountDisplay} 
+                            onChange={handleLoanAmountChange} 
+                            onBlur={handleLoanAmountBlur}
+                            className="input-field input-field-with-adornment-left text-right" 
+                        />
                     </div>
                 </div>
                 <div>
                     <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700">Assigned to</label>
-                    <select id="assigned_to" name="assigned_to" value={formData.assigned_to} onChange={handleChange} className="input-field mt-1">
+                    <select id="assigned_to" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="input-field mt-1">
                         {users.map(user => (
                             <option key={user.id} value={user.id}>{user.first_name} {user.last_name}</option>
                         ))}
@@ -93,16 +122,16 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
                  <div className="md:col-span-2 space-y-2">
                     <span className="block text-sm font-medium text-gray-700">Borrower Type</span>
                     <div className="flex space-x-4">
-                        <label className="flex items-center"><input type="radio" name="borrower_type" value="individual" checked={formData.borrower_type === 'individual'} onChange={handleChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
-                        <label className="flex items-center"><input type="radio" name="borrower_type" value="company" checked={formData.borrower_type === 'company'} onChange={handleChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
-                        <label className="flex items-center"><input type="radio" name="borrower_type" value="both" checked={formData.borrower_type === 'both'} onChange={handleChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrower_type" value="individual" checked={borrowerType === 'individual'} onChange={(e) => setBorrowerType(e.target.value as any)} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrower_type" value="company" checked={borrowerType === 'company'} onChange={(e) => setBorrowerType(e.target.value as any)} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrower_type" value="both" checked={borrowerType === 'both'} onChange={(e) => setBorrowerType(e.target.value as any)} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
                     </div>
                 </div>
                  <div className="md:col-span-2 space-y-2">
                     <span className="block text-sm font-medium text-gray-700">Loan Type</span>
                     <div className="flex space-x-4">
-                        <label className="flex items-center"><input type="radio" name="loan_type" value="purchase" checked={formData.loan_type === 'purchase'} onChange={handleChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Purchase</span></label>
-                        <label className="flex items-center"><input type="radio" name="loan_type" value="refinance" checked={formData.loan_type === 'refinance'} onChange={handleChange} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Refinance</span></label>
+                        <label className="flex items-center"><input type="radio" name="loan_type" value="purchase" checked={loanType === 'purchase'} onChange={(e) => setLoanType(e.target.value as any)} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Purchase</span></label>
+                        <label className="flex items-center"><input type="radio" name="loan_type" value="refinance" checked={loanType === 'refinance'} onChange={(e) => setLoanType(e.target.value as any)} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Refinance</span></label>
                     </div>
                 </div>
             </div>
