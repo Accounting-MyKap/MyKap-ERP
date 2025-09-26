@@ -26,21 +26,23 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
 
+    // CRITICAL FIX: The dependency is now prospect.id.
     // This effect now ONLY syncs the form state when the user selects a DIFFERENT prospect.
-    // This is the key change that prevents the application freeze.
+    // This breaks the re-render cycle during a save operation, preventing the application freeze.
     useEffect(() => {
         if (prospect) {
             setBorrowerName(prospect.borrower_name || '');
             setProspectCode(prospect.prospect_code || '');
             setEmail(prospect.email || '');
             setPhoneNumber(prospect.phone_number || '');
-            setLoanAmount(prospect.loan_amount || 0);
-            setLoanAmountDisplay(formatNumber(prospect.loan_amount));
+            const currentLoanAmount = prospect.loan_amount || 0;
+            setLoanAmount(currentLoanAmount);
+            setLoanAmountDisplay(currentLoanAmount > 0 ? formatNumber(currentLoanAmount) : '');
             setBorrowerType(prospect.borrower_type || 'individual');
             setLoanType(prospect.loan_type || 'purchase');
             setAssignedTo(prospect.assigned_to || '');
         }
-    }, [prospect]);
+    }, [prospect.id]); // The dependency is the key to the fix.
 
     const handleLoanAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const displayValue = e.target.value;
@@ -51,7 +53,7 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
     
     const handleLoanAmountBlur = () => {
         // Format the display value when the user clicks away.
-        setLoanAmountDisplay(formatNumber(loanAmount));
+        setLoanAmountDisplay(loanAmount > 0 ? formatNumber(loanAmount) : '');
     };
 
     const handleSave = async () => {

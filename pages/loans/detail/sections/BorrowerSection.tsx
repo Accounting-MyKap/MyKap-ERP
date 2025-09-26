@@ -19,14 +19,16 @@ const BorrowerSection: React.FC<BorrowerSectionProps> = ({ loan, onUpdate }) => 
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
 
-    // This effect now syncs the form state ONLY when the selected loan changes.
+    // CRITICAL FIX: The dependency is now loan.id.
+    // This effect now ONLY syncs the form state when the user selects a DIFFERENT loan.
+    // This breaks the re-render cycle during a save operation, preventing the application freeze.
     useEffect(() => {
         const details = loan.borrower_details || {};
         setSalutation(details.salutation || '');
         setWorkPhone(details.work_phone || '');
         setMobilePhone(details.mobile_phone || '');
         setAddress(details.mailing_address || {});
-    }, [loan]);
+    }, [loan.id]);
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;

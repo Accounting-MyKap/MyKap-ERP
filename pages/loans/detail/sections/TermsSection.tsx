@@ -23,7 +23,9 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
 
-     // This effect now syncs the form state ONLY when the selected loan changes.
+     // CRITICAL FIX: The dependency is now loan.id.
+     // This effect now ONLY syncs the form state when the user selects a DIFFERENT loan.
+     // This breaks the re-render cycle during a save operation, preventing the application freeze.
      useEffect(() => {
         const terms = loan.terms || {};
         setOriginalAmount(terms.original_amount);
@@ -34,7 +36,7 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
         setMonthlyPayment(terms.monthly_payment);
         setClosingDate(terms.closing_date);
         setMaturityDate(terms.maturity_date);
-    }, [loan]);
+    }, [loan.id]);
 
     const handleSave = async () => {
         setIsSaving(true);

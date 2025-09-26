@@ -19,7 +19,9 @@ const SettingsPage: React.FC = () => {
     const { showToast } = useToast();
 
 
-    // This effect now syncs the form state ONLY when the profile object from context changes.
+    // CRITICAL FIX: The dependency is now profile.id.
+    // This effect now ONLY syncs the form state when the user logs in/out or the profile is re-fetched.
+    // This breaks the re-render cycle during a save operation, preventing any application freeze.
     useEffect(() => {
         if (profile) {
             setFirstName(profile.first_name || '');
@@ -28,7 +30,7 @@ const SettingsPage: React.FC = () => {
             setSecondSurname(profile.second_surname || '');
             setPhoneNumber(profile.phone_number || '');
         }
-    }, [profile]);
+    }, [profile?.id]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
