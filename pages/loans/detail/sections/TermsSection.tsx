@@ -6,12 +6,12 @@ import { useToast } from '../../../../hooks/useToast';
 
 interface TermsSectionProps {
     loan: Prospect;
-    onUpdate: (updatedData: { terms: LoanTerms }) => Promise<void>;
+    onUpdate: (updatedData: Partial<Prospect>) => Promise<void>;
 }
 
 const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
     // State is now managed per-field to prevent unstable re-render cycles.
-    const [originalAmount, setOriginalAmount] = useState<number | undefined>();
+    const [loanAmount, setLoanAmount] = useState<number | undefined>();
     const [noteRate, setNoteRate] = useState<number | ''>('');
     const [loanTermMonths, setLoanTermMonths] = useState<number | undefined>();
     const [principalBalance, setPrincipalBalance] = useState<number | undefined>();
@@ -22,13 +22,11 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
 
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
+    const isProspectStage = loan.status === 'in_progress';
 
-     // CRITICAL FIX: The dependency is now loan.id.
-     // This effect now ONLY syncs the form state when the user selects a DIFFERENT loan.
-     // This breaks the re-render cycle during a save operation, preventing the application freeze.
      useEffect(() => {
+        setLoanAmount(loan.loan_amount);
         const terms = loan.terms || {};
-        setOriginalAmount(terms.original_amount);
         setNoteRate((terms.note_rate || 0) * 100);
         setLoanTermMonths(terms.loan_term_months);
         setPrincipalBalance(terms.principal_balance);
@@ -36,13 +34,13 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
         setMonthlyPayment(terms.monthly_payment);
         setClosingDate(terms.closing_date);
         setMaturityDate(terms.maturity_date);
-    }, [loan.id]);
+    }, [loan.id, loan.loan_amount, loan.terms]);
 
     const handleSave = async () => {
         setIsSaving(true);
         try {
             const termsToSave: Partial<LoanTerms> = {
-                original_amount: originalAmount,
+                original_amount: loanAmount,
                 note_rate: (Number(noteRate) || 0) / 100, // Convert percentage back to decimal
                 loan_term_months: loanTermMonths,
                 principal_balance: principalBalance,
@@ -51,7 +49,12 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                 closing_date: closingDate,
                 maturity_date: maturityDate,
             };
-            await onUpdate({ terms: termsToSave as LoanTerms });
+            
+            await onUpdate({
+                loan_amount: loanAmount,
+                terms: termsToSave as LoanTerms
+            });
+
             showToast('Loan terms saved successfully!', 'success');
         } catch (error: any) {
             showToast(`Error: ${error.message || 'Could not save changes.'}`, 'error');
@@ -68,10 +71,19 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                 <div className="space-y-4">
                     <h4 className="text-md font-semibold text-gray-700 border-b pb-2">General</h4>
                     <div>
-                        <label htmlFor="original_amount" className="block text-sm font-medium text-gray-700">Original Amount</label>
+                        <label htmlFor="loan_amount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="text" inputMode="decimal" id="original_amount" name="original_amount" value={formatNumber(originalAmount)} onChange={(e) => setOriginalAmount(parseCurrency(e.target.value))} className="input-field input-field-with-adornment-left text-right" />
+                            <input 
+                                type="text" 
+                                inputMode="decimal" 
+                                id="loan_amount" 
+                                name="loan_amount" 
+                                value={formatNumber(loanAmount)} 
+                                onChange={(e) => setLoanAmount(parseCurrency(e.target.value))}
+                                disabled={!isProspectStage}
+                                className={`input-field input-field-with-adornment-left text-right ${!isProspectStage ? 'bg-gray-100' : ''}`}
+                            />
                         </div>
                     </div>
                     <div>
@@ -93,7 +105,14 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
                         <label htmlFor="principal_balance" className="block text-sm font-medium text-gray-700">Principal Balance</label>
                         <div className="input-container mt-1">
                             <span className="input-adornment">$</span>
-                            <input type="text" inputMode="decimal" id="principal_balance" name="principal_balance" value={formatNumber(principalBalance)} onChange={(e) => setPrincipalBalance(parseCurrency(e.target.value))} className="input-field input-field-with-adornment-left text-right" />
+                            <input 
+                                type="text" 
+                                id="principal_balance" 
+                                name="principal_balance" 
+                                value={formatNumber(principalBalance)} 
+                                readOnly 
+                                className="input-field input-field-with-adornment-left text-right bg-gray-100" 
+                            />
                         </div>
                     </div>
                      <div>

@@ -101,6 +101,8 @@ export const generateNewProspect = (
         };
     });
 
+    const initialLoanAmount = prospectData.loan_amount || 0;
+
     return {
         ...prospectData,
         status: 'in_progress',
@@ -108,5 +110,9 @@ export const generateNewProspect = (
         current_stage_name: 'Pre-validation',
         assigned_to_name: `${assignedUser.first_name} ${assignedUser.last_name}`,
         stages: initialStages,
+        terms: {
+            original_amount: initialLoanAmount,
+            principal_balance: initialLoanAmount
+        }
     };
 };

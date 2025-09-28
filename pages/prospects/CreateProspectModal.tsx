@@ -20,6 +20,8 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
     const [loanAmountDisplay, setLoanAmountDisplay] = useState('');
     const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
     const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
+    const [county, setCounty] = useState('');
+    const [state, setState] = useState('');
     const [assignedTo, setAssignedTo] = useState('');
     const [error, setError] = useState('');
 
@@ -36,6 +38,8 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                 setLoanAmountDisplay('');
                 setBorrowerType('individual');
                 setLoanType('purchase');
+                setCounty('');
+                setState('');
                 setAssignedTo('');
                 setError('');
             }, 150);
@@ -58,6 +62,8 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
             loan_amount: loanAmount || 0,
             borrower_type: borrowerType,
             loan_type: loanType,
+            county,
+            state,
             assigned_to: assignedTo,
         });
 
@@ -76,13 +82,25 @@ const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClo
                     <label htmlFor="prospectCode" className="block text-sm font-medium text-gray-700">Account</label>
                     <input type="text" id="prospectCode" value={prospectCode} onChange={e => setProspectCode(e.target.value)} className="input-field mt-1" placeholder="E.g., HKF-ML0035" required/>
                 </div>
-                 <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" value={email} onChange={e => setEmail(e.target.value)} className="input-field mt-1" placeholder="E.g., name@example.com" />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" value={email} onChange={e => setEmail(e.target.value)} className="input-field mt-1" placeholder="E.g., name@example.com" />
+                    </div>
+                    <div>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="tel" id="phone" value={phone} onChange={e => setPhone(e.target.value)} className="input-field mt-1" placeholder="E.g., 305-555-1234" />
+                    </div>
                 </div>
-                 <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input type="tel" id="phone" value={phone} onChange={e => setPhone(e.target.value)} className="input-field mt-1" placeholder="E.g., 305-555-1234" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="county" className="block text-sm font-medium text-gray-700">County</label>
+                        <input type="text" id="county" value={county} onChange={e => setCounty(e.target.value)} className="input-field mt-1" placeholder="E.g., Miami-Dade"/>
+                    </div>
+                    <div>
+                        <label htmlFor="state" className="block text-sm font-medium text-gray-700">State</label>
+                        <input type="text" id="state" value={state} onChange={e => setState(e.target.value)} className="input-field mt-1" placeholder="E.g., FL"/>
+                    </div>
                 </div>
                 <div>
                     <label htmlFor="loanAmount" className="block text-sm font-medium text-gray-700">Loan Amount</label>

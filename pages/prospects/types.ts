@@ -104,7 +104,7 @@ export interface PropertyPhoto {
 
 
 export interface Property {
-    id: string;
+    id:string;
     is_primary: boolean;
     is_reo?: boolean;
     description: string;
@@ -175,6 +175,8 @@ export interface Prospect {
     loan_amount: number;
     borrower_type: 'individual' | 'company' | 'both';
     loan_type: 'purchase' | 'refinance';
+    county?: string;
+    state?: string;
     stages: Stage[];
     rejected_at_stage?: number | null;
     

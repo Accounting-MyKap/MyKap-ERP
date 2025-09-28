@@ -194,6 +194,15 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
             throw new Error(`[updateProspect] Prospect with ID ${prospectId} not found.`);
         }
 
+        // If loan_amount is being updated on an active prospect, sync the principal_balance.
+        if (updatePayload.loan_amount !== undefined && originalProspect.status === 'in_progress') {
+            updatePayload.terms = {
+                ...originalProspect.terms,
+                principal_balance: updatePayload.loan_amount,
+            };
+        }
+
+
         // Optimistically update the UI for a responsive feel.
         const optimisticallyUpdated = { ...originalProspect, ...updatePayload };
         console.log(`%c[LOG 5 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Performing optimistic update on UI state.');

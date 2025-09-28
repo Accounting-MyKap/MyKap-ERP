@@ -1,9 +1,10 @@
 // pages/prospects/GenerateDocumentModal.tsx
-import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import React, { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import { Prospect } from './types';
 import { MORTGAGE_TEMPLATE, GUARANTY_AGREEMENT_TEMPLATE, PROMISSORY_NOTE_TEMPLATE } from './documentTemplates';
+import { formatCurrency, formatPercent, numberToWords } from '../../utils/formatters';
+import { useToast } from '../../hooks/useToast';
 
 interface GenerateDocumentModalProps {
     isOpen: boolean;
@@ -12,72 +13,91 @@ interface GenerateDocumentModalProps {
 }
 
 const documentOptions = {
-    mortgage: { name: 'Mortgage', template: MORTGAGE_TEMPLATE },
-    guaranty: { name: 'Guaranty Agreement', template: GUARANTY_AGREEMENT_TEMPLATE },
-    promissory_note: { name: 'Secured Promissory Note', template: PROMISSORY_NOTE_TEMPLATE },
+    promissory_note: { name: 'Secured Promissory Note', template: PROMISSORY_NOTE_TEMPLATE, filename: 'Secured-Promissory-Note.txt' },
+    mortgage: { name: 'Mortgage', template: MORTGAGE_TEMPLATE, filename: 'Mortgage.txt' },
+    guaranty: { name: 'Guaranty Agreement', template: GUARANTY_AGREEMENT_TEMPLATE, filename: 'Guaranty-Agreement.txt' },
 };
 
 type DocumentKey = keyof typeof documentOptions;
 
 const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, onClose, prospect }) => {
-    const [selectedDoc, setSelectedDoc] = useState<DocumentKey>('mortgage');
-    const [generatedText, setGeneratedText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [selectedDoc, setSelectedDoc] = useState<DocumentKey>('promissory_note');
+    const { showToast } = useToast();
 
-    const generatePrompt = () => {
-        const template = documentOptions[selectedDoc].template;
-        // Stringify all prospect data to include in the prompt
-        const prospectDataString = JSON.stringify(prospect, null, 2);
+    // Reset state when modal opens or prospect changes
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedDoc('promissory_note');
+        }
+    }, [isOpen, prospect]);
 
-        return `
-            You are a legal document assistant for a mortgage company. Your task is to take a document template and fill in the placeholders with the provided data.
-            - The placeholders are in all caps (e.g., COMPANY NAME, AMOUNT).
-            - Use the JSON data provided below to find the correct values.
-            - If a value is not available in the data, leave the placeholder as is.
-            - Format numbers and dates appropriately for a legal document.
-            - Be precise and do not add any extra information or commentary. Only output the filled-in document text.
+    const handleDownload = () => {
+        const docInfo = documentOptions[selectedDoc];
+        let template = docInfo.template;
+        
+        // --- Data Gathering ---
+        const primaryProperty = prospect.properties?.find(p => p.is_primary);
+        const propertyAddress = primaryProperty 
+            ? `${primaryProperty.address.street}, ${primaryProperty.address.city}, ${primaryProperty.address.state} ${primaryProperty.address.zip}`
+            : '[PROPERTY ADDRESS NOT FOUND]';
 
-            DOCUMENT TEMPLATE:
-            ---
-            ${template}
-            ---
+        const guarantor = prospect.co_borrowers?.find(cb => cb.relation_type === 'Guarantor');
+        const guarantorName = guarantor ? guarantor.full_name : '[GUARANTOR NOT FOUND]';
+        
+        let borrowerEntityDesc = '';
+        if (prospect.borrower_type === 'individual') {
+            borrowerEntityDesc = `${prospect.borrower_name}, Individually`;
+        } else if (prospect.borrower_type === 'company') {
+            borrowerEntityDesc = `${prospect.borrower_name}, a ${prospect.state || '[STATE]'} Limited Liability Company`;
+        } else { // 'both'
+             borrowerEntityDesc = `${prospect.borrower_name}, a ${prospect.state || '[STATE]'} Limited Liability Company, and ${guarantorName}, Individually`;
+        }
 
-            JSON DATA:
-            ---
-            ${prospectDataString}
-            ---
-        `;
-    };
+        const replacements: { [key: string]: string } = {
+            '{{BORROWER_NAME}}': prospect.borrower_name,
+            '{{COMPANY_NAME}}': "MyKap",
+            '{{AMOUNT}}': formatCurrency(prospect.loan_amount),
+            '{{AMOUNT_IN_WORDS}}': numberToWords(prospect.loan_amount),
+            '{{NOTE_RATE}}': formatPercent(prospect.terms?.note_rate, 3),
+            '{{INTEREST_RATE_NUMBER}}': ((prospect.terms?.note_rate || 0) * 100).toFixed(3),
+            '{{INTEREST_RATE_IN_WORDS}}': numberToWords((prospect.terms?.note_rate || 0) * 100),
+            '{{CLOSING_DATE}}': prospect.terms?.closing_date || '[CLOSING DATE]',
+            '{{EFFECTIVE_DATE}}': prospect.terms?.closing_date || new Date().toLocaleDateString('en-US'),
+            '{{PROPERTY_ADDRESS}}': propertyAddress,
+            '{{GUARANTOR_NAME}}': guarantorName,
+            '{{BORROWER_ENTITY_DESCRIPTION}}': borrowerEntityDesc,
+            '{{NUMBER_OF_MONTHS}}': String(prospect.terms?.loan_term_months || '[# MONTHS]'),
+            '{{NUMBER_OF_MONTHS_IN_WORDS}}': numberToWords(prospect.terms?.loan_term_months),
+            '{{MONTHLY_INSTALLMENT}}': formatCurrency(prospect.terms?.monthly_payment),
+            '{{STATE}}': prospect.state || '[STATE]'
+        };
 
-    const handleGenerate = async () => {
-        setIsLoading(true);
-        setError('');
-        setGeneratedText('');
+        // --- Template Filling ---
+        for (const [key, value] of Object.entries(replacements)) {
+            template = template.replace(new RegExp(key, 'g'), value);
+        }
+
+        // --- File Download ---
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-            const prompt = generatePrompt();
-            const response = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: prompt,
-            });
-            setGeneratedText(response.text);
+            const blob = new Blob([template], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${prospect.prospect_code}-${docInfo.filename}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast('Document downloaded successfully!', 'success');
+            onClose();
         } catch (err) {
             console.error(err);
-            setError('Failed to generate document. Please check the API key and try again.');
-        } finally {
-            setIsLoading(false);
+            showToast('Failed to download document.', 'error');
         }
-    };
-    
-    const handleCopyToClipboard = () => {
-        navigator.clipboard.writeText(generatedText)
-            .then(() => alert('Document text copied to clipboard!'))
-            .catch(err => console.error('Failed to copy text: ', err));
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Generate Closing Document">
+        <Modal isOpen={isOpen} onClose={onClose} title="Generate and Download Document">
             <div className="space-y-4">
                 <div>
                     <label htmlFor="docType" className="block text-sm font-medium text-gray-700">Select Document Type</label>
@@ -93,42 +113,20 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                     </select>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="pt-4 flex justify-end space-x-3">
+                     <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
                     <button
-                        onClick={handleGenerate}
-                        disabled={isLoading}
-                        className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+                        onClick={handleDownload}
+                        className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700"
                     >
-                        {isLoading ? 'Generating...' : 'Generate Document'}
+                        Download Document
                     </button>
                 </div>
-
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                
-                {generatedText && (
-                    <div className="space-y-2 pt-4 border-t">
-                        <div className="flex justify-between items-center">
-                             <h4 className="text-lg font-semibold text-gray-800">Generated Document</h4>
-                             <button
-                                onClick={handleCopyToClipboard}
-                                className="text-sm bg-gray-200 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-300"
-                            >
-                                Copy to Clipboard
-                            </button>
-                        </div>
-                        <textarea
-                            readOnly
-                            value={generatedText}
-                            className="w-full h-64 p-2 border rounded-md bg-gray-50 font-mono text-xs"
-                        />
-                    </div>
-                )}
             </div>
         </Modal>
     );
 };
 
 export default GenerateDocumentModal;
-
-// Note: documentTemplates.ts would be created to store the large template strings
-// to keep this file clean. I've added a placeholder import for it.

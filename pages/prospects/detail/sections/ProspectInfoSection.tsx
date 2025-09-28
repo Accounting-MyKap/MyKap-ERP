@@ -1,5 +1,3 @@
-
-
 // pages/prospects/detail/sections/ProspectInfoSection.tsx
 import React, { useState, useEffect } from 'react';
 import { Prospect, UserProfile } from '../../types';
@@ -18,11 +16,11 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
     const [prospectCode, setProspectCode] = useState('');
     const [email, setEmail] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [loanAmount, setLoanAmount] = useState<number>(0);
-    const [loanAmountDisplay, setLoanAmountDisplay] = useState('');
     const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
     const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
     const [assignedTo, setAssignedTo] = useState('');
+    const [county, setCounty] = useState('');
+    const [stateVal, setStateVal] = useState('');
     
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
@@ -36,26 +34,13 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
             setProspectCode(prospect.prospect_code || '');
             setEmail(prospect.email || '');
             setPhoneNumber(prospect.phone_number || '');
-            const currentLoanAmount = prospect.loan_amount || 0;
-            setLoanAmount(currentLoanAmount);
-            setLoanAmountDisplay(currentLoanAmount > 0 ? formatNumber(currentLoanAmount) : '');
             setBorrowerType(prospect.borrower_type || 'individual');
             setLoanType(prospect.loan_type || 'purchase');
             setAssignedTo(prospect.assigned_to || '');
+            setCounty(prospect.county || '');
+            setStateVal(prospect.state || '');
         }
     }, [prospect.id]); // The dependency is the key to the fix.
-
-    const handleLoanAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const displayValue = e.target.value;
-        const numericValue = parseCurrency(displayValue);
-        setLoanAmountDisplay(displayValue);
-        setLoanAmount(numericValue);
-    };
-    
-    const handleLoanAmountBlur = () => {
-        // Format the display value when the user clicks away.
-        setLoanAmountDisplay(loanAmount > 0 ? formatNumber(loanAmount) : '');
-    };
 
     const handleSave = async () => {
         console.log(`%c[LOG 1 - ProspectInfoSection]`, 'color: #9c27b0; font-weight: bold;', 'handleSave initiated.');
@@ -67,10 +52,11 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
                 prospect_code: prospectCode,
                 email: email,
                 phone_number: phoneNumber,
-                loan_amount: loanAmount,
                 borrower_type: borrowerType,
                 loan_type: loanType,
                 assigned_to: assignedTo,
+                county: county,
+                state: stateVal,
             };
             console.log(`%c[LOG 2 - ProspectInfoSection]`, 'color: #9c27b0; font-weight: bold;', 'Calling onUpdate with payload:', payload);
             await onUpdate(payload);
@@ -106,20 +92,13 @@ const ProspectInfoSection: React.FC<ProspectInfoSectionProps> = ({ prospect, use
                     <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700">Phone Number</label>
                     <input type="tel" id="phone_number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="input-field mt-1" />
                 </div>
+                 <div>
+                    <label htmlFor="county" className="block text-sm font-medium text-gray-700">County</label>
+                    <input type="text" id="county" value={county} onChange={(e) => setCounty(e.target.value)} className="input-field mt-1" />
+                </div>
                 <div>
-                    <label htmlFor="loan_amount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
-                    <div className="input-container mt-1">
-                        <span className="input-adornment">$</span>
-                        <input 
-                            type="text" 
-                            inputMode="decimal" 
-                            id="loan_amount" 
-                            value={loanAmountDisplay} 
-                            onChange={handleLoanAmountChange} 
-                            onBlur={handleLoanAmountBlur}
-                            className="input-field input-field-with-adornment-left text-right" 
-                        />
-                    </div>
+                    <label htmlFor="state" className="block text-sm font-medium text-gray-700">State</label>
+                    <input type="text" id="state" value={stateVal} onChange={(e) => setStateVal(e.target.value)} className="input-field mt-1" />
                 </div>
                 <div>
                     <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700">Assigned to</label>
