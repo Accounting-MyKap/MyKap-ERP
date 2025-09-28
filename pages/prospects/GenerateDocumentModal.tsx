@@ -1,5 +1,6 @@
 // pages/prospects/GenerateDocumentModal.tsx
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 import Modal from '../../components/ui/Modal';
 import { Prospect } from './types';
 import { MORTGAGE_TEMPLATE, GUARANTY_AGREEMENT_TEMPLATE, PROMISSORY_NOTE_TEMPLATE } from './documentTemplates';
@@ -13,9 +14,9 @@ interface GenerateDocumentModalProps {
 }
 
 const documentOptions = {
-    promissory_note: { name: 'Secured Promissory Note', template: PROMISSORY_NOTE_TEMPLATE, filename: 'Secured-Promissory-Note.txt' },
-    mortgage: { name: 'Mortgage', template: MORTGAGE_TEMPLATE, filename: 'Mortgage.txt' },
-    guaranty: { name: 'Guaranty Agreement', template: GUARANTY_AGREEMENT_TEMPLATE, filename: 'Guaranty-Agreement.txt' },
+    promissory_note: { name: 'Secured Promissory Note', template: PROMISSORY_NOTE_TEMPLATE, filename: 'Secured-Promissory-Note.pdf' },
+    mortgage: { name: 'Mortgage', template: MORTGAGE_TEMPLATE, filename: 'Mortgage.pdf' },
+    guaranty: { name: 'Guaranty Agreement', template: GUARANTY_AGREEMENT_TEMPLATE, filename: 'Guaranty-Agreement.pdf' },
 };
 
 type DocumentKey = keyof typeof documentOptions;
@@ -38,7 +39,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
         // --- Data Gathering ---
         const primaryProperty = prospect.properties?.find(p => p.is_primary);
         const propertyAddress = primaryProperty 
-            ? `${primaryProperty.address.street}, ${primaryProperty.address.city}, ${primaryProperty.address.state} ${primaryProperty.address.zip}`
+            ? `${primaryProperty.address.street || ''}, ${primaryProperty.address.city || ''}, ${primaryProperty.address.state || ''} ${primaryProperty.address.zip || ''}`.trim().replace(/,$/, '')
             : '[PROPERTY ADDRESS NOT FOUND]';
 
         const guarantor = prospect.co_borrowers?.find(cb => cb.relation_type === 'Guarantor');
@@ -57,17 +58,18 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             '{{BORROWER_NAME}}': prospect.borrower_name,
             '{{COMPANY_NAME}}': "MyKap",
             '{{AMOUNT}}': formatCurrency(prospect.loan_amount),
-            '{{AMOUNT_IN_WORDS}}': numberToWords(prospect.loan_amount),
+            '{{AMOUNT_IN_WORDS}}': numberToWords(prospect.loan_amount) || '[AMOUNT IN WORDS]',
             '{{NOTE_RATE}}': formatPercent(prospect.terms?.note_rate, 3),
             '{{INTEREST_RATE_NUMBER}}': ((prospect.terms?.note_rate || 0) * 100).toFixed(3),
-            '{{INTEREST_RATE_IN_WORDS}}': numberToWords((prospect.terms?.note_rate || 0) * 100),
+            '{{INTEREST_RATE_IN_WORDS}}': numberToWords((prospect.terms?.note_rate || 0) * 100) || '[RATE IN WORDS]',
             '{{CLOSING_DATE}}': prospect.terms?.closing_date || '[CLOSING DATE]',
+            '{{MATURITY_DATE}}': prospect.terms?.maturity_date || '[MATURITY DATE]',
             '{{EFFECTIVE_DATE}}': prospect.terms?.closing_date || new Date().toLocaleDateString('en-US'),
             '{{PROPERTY_ADDRESS}}': propertyAddress,
             '{{GUARANTOR_NAME}}': guarantorName,
             '{{BORROWER_ENTITY_DESCRIPTION}}': borrowerEntityDesc,
             '{{NUMBER_OF_MONTHS}}': String(prospect.terms?.loan_term_months || '[# MONTHS]'),
-            '{{NUMBER_OF_MONTHS_IN_WORDS}}': numberToWords(prospect.terms?.loan_term_months),
+            '{{NUMBER_OF_MONTHS_IN_WORDS}}': numberToWords(prospect.terms?.loan_term_months) || '[# MONTHS IN WORDS]',
             '{{MONTHLY_INSTALLMENT}}': formatCurrency(prospect.terms?.monthly_payment),
             '{{STATE}}': prospect.state || '[STATE]'
         };
@@ -77,22 +79,43 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             template = template.replace(new RegExp(key, 'g'), value);
         }
 
-        // --- File Download ---
+        // --- PDF Generation ---
         try {
-            const blob = new Blob([template], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${prospect.prospect_code}-${docInfo.filename}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showToast('Document downloaded successfully!', 'success');
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'letter' // US Letter size
+            });
+
+            const margin = 15; // mm
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const maxWidth = pageWidth - margin * 2;
+            let y = margin;
+            const lineHeight = 6; // mm for 11pt font size
+
+            doc.setFont('times', 'normal');
+            doc.setFontSize(11);
+
+            const lines = doc.splitTextToSize(template, maxWidth);
+
+            lines.forEach((line: string) => {
+                if (y + lineHeight > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin; 
+                }
+                doc.text(line, margin, y);
+                y += lineHeight;
+            });
+
+            const filename = `${prospect.prospect_code}-${docInfo.filename}`;
+            doc.save(filename);
+
+            showToast('PDF document generated successfully!', 'success');
             onClose();
         } catch (err) {
             console.error(err);
-            showToast('Failed to download document.', 'error');
+            showToast('Failed to generate PDF document.', 'error');
         }
     };
 
@@ -121,7 +144,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                         onClick={handleDownload}
                         className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700"
                     >
-                        Download Document
+                        Download PDF
                     </button>
                 </div>
             </div>
