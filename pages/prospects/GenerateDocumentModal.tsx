@@ -45,18 +45,30 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
         const guarantor = prospect.co_borrowers?.find(cb => cb.relation_type === 'Guarantor');
         const guarantorName = guarantor ? guarantor.full_name : '[GUARANTOR NOT FOUND]';
         
+        // This is for display in the main body of the document
         let borrowerEntityDesc = '';
+        // This is for the notice/address section specifically
+        let borrowerNoticeAddress = '';
+        
         if (prospect.borrower_type === 'individual') {
             borrowerEntityDesc = `${prospect.borrower_name}, Individually`;
+            borrowerNoticeAddress = borrowerEntityDesc;
         } else if (prospect.borrower_type === 'company') {
             borrowerEntityDesc = `${prospect.borrower_name}, a ${prospect.state || '[STATE]'} Limited Liability Company`;
+            borrowerNoticeAddress = borrowerEntityDesc;
         } else { // 'both'
              borrowerEntityDesc = `${prospect.borrower_name}, a ${prospect.state || '[STATE]'} Limited Liability Company, and ${guarantorName}, Individually`;
+             borrowerNoticeAddress = `${prospect.borrower_name}, a ${prospect.state || '[STATE]'} Limited Liability Company`;
         }
+        
+        const signatoryForNotary = (prospect.borrower_type === 'company' || prospect.borrower_type === 'both') 
+            ? guarantorName
+            : prospect.borrower_name;
+
 
         const replacements: { [key: string]: string } = {
             '{{BORROWER_NAME}}': prospect.borrower_name,
-            '{{COMPANY_NAME}}': "MyKap",
+            '{{COMPANY_NAME}}': "Home Kapital Finance, LLC",
             '{{AMOUNT}}': formatCurrency(prospect.loan_amount),
             '{{AMOUNT_IN_WORDS}}': numberToWords(prospect.loan_amount) || '[AMOUNT IN WORDS]',
             '{{NOTE_RATE}}': formatPercent(prospect.terms?.note_rate, 3),
@@ -66,8 +78,10 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             '{{MATURITY_DATE}}': prospect.terms?.maturity_date || '[MATURITY DATE]',
             '{{EFFECTIVE_DATE}}': prospect.terms?.closing_date || new Date().toLocaleDateString('en-US'),
             '{{PROPERTY_ADDRESS}}': propertyAddress,
-            '{{GUARANTOR_NAME}}': guarantorName,
+            '{{GUARANTOR_NAME_INDIVIDUALLY}}': guarantorName,
             '{{BORROWER_ENTITY_DESCRIPTION}}': borrowerEntityDesc,
+            '{{BORROWER_NOTICE_ADDRESS}}': borrowerNoticeAddress,
+            '{{SIGNATORY_NAME_FOR_NOTARY}}': signatoryForNotary,
             '{{NUMBER_OF_MONTHS}}': String(prospect.terms?.loan_term_months || '[# MONTHS]'),
             '{{NUMBER_OF_MONTHS_IN_WORDS}}': numberToWords(prospect.terms?.loan_term_months) || '[# MONTHS IN WORDS]',
             '{{MONTHLY_INSTALLMENT}}': formatCurrency(prospect.terms?.monthly_payment),
@@ -76,7 +90,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
 
         // --- Template Filling ---
         for (const [key, value] of Object.entries(replacements)) {
-            template = template.replace(new RegExp(key, 'g'), value);
+            template = template.replace(new RegExp(key.replace(/\{\{/g, '{{').replace(/\}\}/g, '}}'), 'g'), value);
         }
 
         // --- PDF Generation ---
@@ -108,7 +122,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                 y += lineHeight;
             });
 
-            const filename = `${prospect.prospect_code}-${docInfo.filename}`;
+            const filename = `${prospect.prospect_code}-${docInfo.filename.replace('.pdf','')}.pdf`;
             doc.save(filename);
 
             showToast('PDF document generated successfully!', 'success');

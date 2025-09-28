@@ -21,7 +21,7 @@ _________________________
 export const GUARANTY_AGREEMENT_TEMPLATE = `
 GUARANTY AGREEMENT
 
-This Guaranty Agreement is made on {{CLOSING_DATE}}, by {{GUARANTOR_NAME}} ("Guarantor") in favor of {{COMPANY_NAME}} ("Lender").
+This Guaranty Agreement is made on {{CLOSING_DATE}}, by {{GUARANTOR_NAME_INDIVIDUALLY}} ("Guarantor") in favor of {{COMPANY_NAME}} ("Lender").
 
 1.  **Guaranty:** The Guarantor unconditionally guarantees the payment of all obligations of {{BORROWER_NAME}} to the Lender, up to the amount of {{AMOUNT}} ({{AMOUNT_IN_WORDS}}).
 2.  **Consideration:** The Guarantor acknowledges receipt of good and valuable consideration for this Guaranty.
@@ -29,7 +29,7 @@ This Guaranty Agreement is made on {{CLOSING_DATE}}, by {{GUARANTOR_NAME}} ("Gua
 IN WITNESS WHEREOF, the Guarantor has executed this Guaranty Agreement.
 
 _________________________
-{{GUARANTOR_NAME}} (Guarantor)
+{{GUARANTOR_NAME_INDIVIDUALLY}} (Guarantor)
 `;
 
 export const PROMISSORY_NOTE_TEMPLATE = `
@@ -91,7 +91,7 @@ In carrying out the foregoing, amounts received shall be applied in the numerica
 
 3.6. Prepayments. This Note may be prepaid, in whole or in part, at any time and from time to time without premium or penalty. However, all prepayments will be applied first to any accrued interest and then to principal. Amounts prepaid may not be reborrowed.
 
-4. SECURITY. This Note is secured by that (or those) certain: (a) the Mortgage creating a first lien on the Mortgaged Premises Described in Exhibit A; (b) a Personal Guaranty Agreement, dated as of the Effective Date, made by {{GUARANTOR_NAME}}, Individually, to the Lender (the “Guaranty"); and (c) any and all other documents now or hereafter given to evidence or secure payment of this Note or delivered to induce the Lender to disburse the proceeds of the Loan, as the foregoing documents may hereafter be amended, restated or replaced from time to time.
+4. SECURITY. This Note is secured by that (or those) certain: (a) the Mortgage creating a first lien on the Mortgaged Premises Described in Exhibit A; (b) a Personal Guaranty Agreement, dated as of the Effective Date, made by {{GUARANTOR_NAME_INDIVIDUALLY}}, Individually, to the Lender (the “Guaranty"); and (c) any and all other documents now or hereafter given to evidence or secure payment of this Note or delivered to induce the Lender to disburse the proceeds of the Loan, as the foregoing documents may hereafter be amended, restated or replaced from time to time.
 
 5. EVENTS OF DEFAULT. The occurrence of any one or more of the following events shall constitute an "Event of Default" under this Note:
 
@@ -153,9 +153,9 @@ In carrying out the foregoing, amounts received shall be applied in the numerica
 
 If to the Lender: Home Kapital Finance, LLC, a Florida Limited Liability Company, 1555 Bonaventure Blvd, Suite 2015, Weston, FL 33326
 
-If to the Borrower(s) and Guarantor(s): {{BORROWER_ENTITY_DESCRIPTION}}, Individually.
+If to the Borrower(s) and Guarantor(s): {{BORROWER_NOTICE_ADDRESS}}
 Email:
-{{GUARANTOR_NAME}}
+{{GUARANTOR_NAME_INDIVIDUALLY}}
 Address:
 Email:
 Address:
@@ -178,14 +178,14 @@ IN WITNESS WHEREOF, the Borrower(s) and Guarantor(s) has executed and delivered 
 BORROWER(S) AND GUARANTOR(S)(S):
 
 By: _________________________ Date: _________________________
-{{GUARANTOR_NAME}}, Member of {{BORROWER_NAME}}, a {{STATE}} Limited Liability Company
+{{BORROWER_NAME}}, a {{STATE}} Limited Liability Company
 
 By: _________________________ Date: _________________________
-{{GUARANTOR_NAME}}, Individually
+{{GUARANTOR_NAME_INDIVIDUALLY}}, Individually
 
 State of ____________ // County of ____________
 
-On ____________, before me, ____________, a Notary Public in The County of ____________, State of ____________, personally appeared {{GUARANTOR_NAME}}, Individually and as a Member of {{BORROWER_NAME}}, a {{STATE}} Limited Liability Company, Government Issued ID Verified, to me known to be the person described in and who executed the foregoing instrument and acknowledged that he/she executed the same as his/her free act and deed.
+On ____________, before me, ____________, a Notary Public in The County of ____________, State of ____________, personally appeared {{SIGNATORY_NAME_FOR_NOTARY}}, Individually and as a Member of {{BORROWER_NAME}}, a {{STATE}} Limited Liability Company, Government Issued ID Verified, to me known to be the person described in and who executed the foregoing instrument and acknowledged that he/she executed the same as his/her free act and deed.
 
 Notary Public: _________________________
 
