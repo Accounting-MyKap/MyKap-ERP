@@ -120,22 +120,45 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 theme: 'snow',
             });
             quillRef.current = quill;
+            
+            // Get the toolbar module to add custom handlers
+            const toolbar = quill.getModule('toolbar');
+            if (toolbar) {
+                 // Override the alignment handler to correctly format only the selected lines.
+                (toolbar as any).addHandler('align', function(value: string | boolean) {
+                    const quillInstance = (this as any).quill;
+                    const range = quillInstance.getSelection();
+                    if (range) {
+                        quillInstance.formatLine(range.index, range.length, 'align', value);
+                    }
+                });
+                
+                // Override the list handler to fix insertion point and toggle behavior.
+                (toolbar as any).addHandler('list', function(value: 'bullet' | 'ordered') {
+                    const quillInstance = (this as any).quill;
+                    const range = quillInstance.getSelection(true); // `true` to ensure focus
+                    if (range) {
+                        const [line, ] = quillInstance.getLine(range.index);
+                        const format = line.formats();
+                        
+                        // If the line already has the same list format, remove it (toggle off).
+                        // Otherwise, apply the new list format.
+                        if (format.list === value) {
+                            quillInstance.formatLine(range.index, range.length, 'list', false);
+                        } else {
+                            quillInstance.formatLine(range.index, range.length, 'list', value);
+                        }
+                    }
+                });
+            }
         }
 
         if (quillRef.current && template) {
-            // Unregister the text-change event before setting content to avoid flicker/loops
-            quillRef.current.off('text-change', onTextChange);
             quillRef.current.root.innerHTML = template.content;
             quillRef.current.enable(!template.isReadOnly);
-            // Re-register after content is set
-            quillRef.current.on('text-change', onTextChange);
-
         } else if (quillRef.current) {
              quillRef.current.root.innerHTML = '';
         }
-        
-        // Dummy handler for the effect dependency
-        function onTextChange() {}
 
     }, [template]);
 
@@ -157,7 +180,8 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
         const quill = quillRef.current;
         if (quill) {
             const range = quill.getSelection(true);
-            quill.insertText(range.index, textToInsert);
+            quill.insertText(range.index, textToInsert, 'user');
+            quill.setSelection(range.index + textToInsert.length, 0, 'silent');
         }
     };
 
