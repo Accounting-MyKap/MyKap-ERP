@@ -10,11 +10,11 @@ import { formatCurrency, formatPercent, numberToWords } from '../../utils/format
 import { useToast } from '../../hooks/useToast';
 import { useTemplates } from '../../hooks/useTemplates';
 
-// Set up pdfmake virtual file system
-// The 'vfs_fonts.js' file is a UMD module that doesn't have a default export.
-// We must import the entire module's namespace as `pdfFonts`. The virtual file system
-// is then available under the `pdfMake.vfs` property within that namespace.
-pdfMake.vfs = (pdfFonts as any).pdfMake.vfs;
+// Set up pdfmake virtual file system.
+// The 'vfs_fonts.js' file is a UMD module. When imported as an ES module using `import * as`,
+// its `module.exports` payload is typically available on the `default` property of the namespace object.
+// The pdfmake documentation suggests the payload is `{ pdfMake: { vfs: ... } }`, so we access it accordingly.
+(pdfMake as any).vfs = (pdfFonts as any).default.pdfMake.vfs;
 
 
 type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
