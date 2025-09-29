@@ -4,6 +4,15 @@ import { Template } from '../../contexts/TemplatesContext';
 import { useToast } from '../../hooks/useToast';
 import { InformationCircleIcon, MyKapLogo } from '../../components/icons';
 
+// --- Quill Font Registration ---
+// Whitelist the fonts to be used in the editor.
+// FIX: Explicitly type Font as 'any'. Quill's dynamic `import` returns a type that is
+// inferred as `unknown` in strict environments, causing type errors on the following lines.
+const Font: any = Quill.import('formats/font');
+Font.whitelist = ['sans-serif', 'serif', 'monospace', 'times-new-roman'];
+Quill.register(Font, true);
+
+
 interface TemplateEditorProps {
     template: Template | null;
     onSave: (templateId: string, newContent: string) => Promise<void>;
@@ -41,6 +50,12 @@ const CO_BORROWER_LOOP_PLACEHOLDERS = [
 const CustomToolbar = () => (
   <div id="custom-toolbar" className="ql-toolbar ql-snow border-t-0 border-x-0" onMouseDown={e => e.preventDefault()}>
     <span className="ql-formats">
+      <select className="ql-font" defaultValue="sans-serif">
+        <option value="sans-serif">Sans Serif</option>
+        <option value="serif">Serif</option>
+        <option value="monospace">Monospace</option>
+        <option value="times-new-roman">Times New Roman</option>
+      </select>
       <select className="ql-header" defaultValue="">
         <option value="1"></option>
         <option value="2"></option>
@@ -76,6 +91,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     const { showToast } = useToast();
     const quillRef = useRef<Quill | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
+    const lastSelectionRef = useRef<any>(null);
     
     const [sidebarWidth, setSidebarWidth] = useState(320);
     const isResizingRef = useRef(false);
@@ -121,28 +137,34 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             });
             quillRef.current = quill;
             
-            // Get the toolbar module to add custom handlers
+            // This listener is critical. It captures the user's selection *before* it can be lost.
+            quill.on('selection-change', (range, _oldRange, source) => {
+                if (range && source === 'user') {
+                    lastSelectionRef.current = range;
+                }
+            });
+
             const toolbar = quill.getModule('toolbar');
             if (toolbar) {
-                 // Override the alignment handler to correctly format only the selected lines.
+                 // DEFINITIVE FIX: The handler now *only* uses the stored selection reference.
+                 // This makes it immune to the editor losing focus when the toolbar is clicked.
                 (toolbar as any).addHandler('align', function(value: string | boolean) {
                     const quillInstance = (this as any).quill;
-                    const range = quillInstance.getSelection();
+                    const range = lastSelectionRef.current; // Use the stored range.
                     if (range) {
                         quillInstance.formatLine(range.index, range.length, 'align', value);
                     }
                 });
                 
-                // Override the list handler to fix insertion point and toggle behavior.
+                 // DEFINITIVE FIX: This handler also uses the stored selection to correctly toggle lists.
                 (toolbar as any).addHandler('list', function(value: 'bullet' | 'ordered') {
                     const quillInstance = (this as any).quill;
-                    const range = quillInstance.getSelection(true); // `true` to ensure focus
+                    const range = lastSelectionRef.current; // Use the stored range.
                     if (range) {
                         const [line, ] = quillInstance.getLine(range.index);
                         const format = line.formats();
                         
-                        // If the line already has the same list format, remove it (toggle off).
-                        // Otherwise, apply the new list format.
+                        // Toggle behavior: if the same list format is already applied, remove it.
                         if (format.list === value) {
                             quillInstance.formatLine(range.index, range.length, 'list', false);
                         } else {
