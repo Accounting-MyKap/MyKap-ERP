@@ -36,14 +36,39 @@ const CO_BORROWER_LOOP_PLACEHOLDERS = [
     { placeholder: '{{this.relation_type}}', description: 'Their relation to the loan (e.g., Co-Borrower, Guarantor).' }
 ];
 
-const quillToolbarOptions = [
-  [{ 'header': [1, 2, 3, false] }],
-  ['bold', 'italic', 'underline'],
-  [{ 'align': [] }],
-  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-  [{ 'indent': '-1'}, { 'indent': '+1' }],
-  ['clean']
-];
+// A dedicated component for the Quill toolbar.
+// This allows for a sticky layout and prevents focus stealing.
+const CustomToolbar = () => (
+  <div id="custom-toolbar" className="ql-toolbar ql-snow border-t-0 border-x-0" onMouseDown={e => e.preventDefault()}>
+    <span className="ql-formats">
+      <select className="ql-header" defaultValue="">
+        <option value="1"></option>
+        <option value="2"></option>
+        <option value="3"></option>
+        <option value=""></option>
+      </select>
+    </span>
+    <span className="ql-formats">
+      <button className="ql-bold"></button>
+      <button className="ql-italic"></button>
+      <button className="ql-underline"></button>
+    </span>
+    <span className="ql-formats">
+      <select className="ql-align"></select>
+    </span>
+    <span className="ql-formats">
+      <button className="ql-list" value="ordered"></button>
+      <button className="ql-list" value="bullet"></button>
+    </span>
+    <span className="ql-formats">
+      <button className="ql-indent" value="-1"></button>
+      <button className="ql-indent" value="+1"></button>
+    </span>
+    <span className="ql-formats">
+      <button className="ql-clean"></button>
+    </span>
+  </div>
+);
 
 
 const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => {
@@ -52,16 +77,14 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     const quillRef = useRef<Quill | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
     
-    // State and refs for resizable sidebar
-    const [sidebarWidth, setSidebarWidth] = useState(320); // initial width w-80
+    const [sidebarWidth, setSidebarWidth] = useState(320);
     const isResizingRef = useRef(false);
 
-    // --- Resizing Logic ---
     const handleMouseMove = useCallback((e: MouseEvent) => {
         if (!isResizingRef.current) return;
         const newWidth = window.innerWidth - e.clientX;
-        const minWidth = 280; // min width constraint
-        const maxWidth = 640; // max width constraint
+        const minWidth = 280;
+        const maxWidth = 640;
         if (newWidth >= minWidth && newWidth <= maxWidth) {
             setSidebarWidth(newWidth);
         }
@@ -80,7 +103,6 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
         window.addEventListener('mouseup', handleMouseUp);
     };
 
-    // Effect for cleaning up global listeners
     useEffect(() => {
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
@@ -93,28 +115,27 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
         if (editorRef.current && !quillRef.current && template) {
             const quill = new Quill(editorRef.current, {
                 modules: {
-                    toolbar: quillToolbarOptions,
+                    toolbar: '#custom-toolbar',
                 },
                 theme: 'snow',
             });
-            
-            const toolbar = quill.getModule('toolbar') as any;
-            toolbar.addHandler('align', function (this: {quill: Quill}, value: any) {
-                const range = this.quill.getSelection();
-                if (range) {
-                    this.quill.formatLine(range.index, range.length, 'align', value);
-                }
-            });
-
             quillRef.current = quill;
         }
 
         if (quillRef.current && template) {
+            // Unregister the text-change event before setting content to avoid flicker/loops
+            quillRef.current.off('text-change', onTextChange);
             quillRef.current.root.innerHTML = template.content;
             quillRef.current.enable(!template.isReadOnly);
+            // Re-register after content is set
+            quillRef.current.on('text-change', onTextChange);
+
         } else if (quillRef.current) {
              quillRef.current.root.innerHTML = '';
         }
+        
+        // Dummy handler for the effect dependency
+        function onTextChange() {}
 
     }, [template]);
 
@@ -177,9 +198,14 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 </div>
             )}
             <div className="flex-grow flex min-h-0">
-                {/* Editor container */}
-                <div className="flex-grow relative overflow-y-auto">
-                    <div ref={editorRef} className={`p-4 h-full ${isReadOnly ? 'bg-gray-100' : ''}`}></div>
+                {/* Editor container with STICKY TOOLBAR */}
+                <div className="flex-grow flex flex-col min-h-0">
+                    {/* Toolbar - doesn't scroll */}
+                    <CustomToolbar />
+                    {/* Scrollable editor area */}
+                    <div className={`flex-grow overflow-y-auto ${isReadOnly ? 'bg-gray-100' : 'bg-white'}`}>
+                         <div ref={editorRef} className={isReadOnly ? 'bg-gray-100' : ''} />
+                    </div>
                 </div>
 
                 {/* Resize Handle */}
