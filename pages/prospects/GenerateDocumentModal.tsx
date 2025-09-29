@@ -1,8 +1,10 @@
 // pages/prospects/GenerateDocumentModal.tsx
 import React, { useState, useEffect } from 'react';
 import pdfMake from 'pdfmake/build/pdfmake';
-// FIX: The type definitions for pdfmake fonts use a named export, so a namespace import is required to resolve the type error.
-import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+// The 'vfs_fonts.js' file is not a standard ES module.
+// Importing it this way executes the script for its side effect,
+// which is to attach a 'vfs' object to the global 'window.pdfMake'.
+import 'pdfmake/build/vfs_fonts';
 import htmlToPdfmake from 'html-to-pdfmake';
 
 import Modal from '../../components/ui/Modal';
@@ -11,9 +13,12 @@ import { formatCurrency, formatPercent, numberToWords } from '../../utils/format
 import { useToast } from '../../hooks/useToast';
 import { useTemplates } from '../../hooks/useTemplates';
 
-// Set up pdfmake virtual file system.
-// This is the officially documented way to link the fonts with the pdfmake instance when using modules.
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
+// Manually assign the virtual file system from the global scope to the imported pdfMake instance.
+// This is necessary because the UMD module for fonts and the UMD module for pdfmake
+// do not correctly link up when loaded via ES module imports.
+if ((window as any).pdfMake?.vfs) {
+    pdfMake.vfs = (window as any).pdfMake.vfs;
+}
 
 
 type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
