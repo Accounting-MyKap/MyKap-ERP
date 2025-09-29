@@ -1,7 +1,7 @@
 // pages/prospects/GenerateDocumentModal.tsx
 import React, { useState, useEffect } from 'react';
 import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import htmlToPdfmake from 'html-to-pdfmake';
 
 import Modal from '../../components/ui/Modal';
@@ -11,9 +11,10 @@ import { useToast } from '../../hooks/useToast';
 import { useTemplates } from '../../hooks/useTemplates';
 
 // Set up pdfmake virtual file system
-if (pdfMake.vfs === undefined) {
-  pdfMake.vfs = pdfFonts.pdfMake.vfs;
-}
+// The 'vfs_fonts.js' file is a UMD module that doesn't have a default export.
+// We must import the entire module's namespace as `pdfFonts`. The virtual file system
+// is then available under the `pdfMake.vfs` property within that namespace.
+pdfMake.vfs = (pdfFonts as any).pdfMake.vfs;
 
 
 type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
@@ -134,13 +135,15 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                 },
                  styles: {
                     'ql-align-center': {
-                        alignment: 'center'
+                        // FIX: Use 'as const' to assert the literal type for alignment, resolving the
+                        // TypeScript error where 'string' was not assignable to type 'Alignment'.
+                        alignment: 'center' as const
                     },
                     'ql-align-right': {
-                        alignment: 'right'
+                        alignment: 'right' as const
                     },
                     'ql-align-justify': {
-                        alignment: 'justify'
+                        alignment: 'justify' as const
                     }
                 }
             };
