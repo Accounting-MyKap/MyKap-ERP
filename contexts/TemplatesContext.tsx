@@ -1,38 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '../services/supabase';
 
-// Re-define the original templates here for the one-time seeding process
-const MORTGAGE_TEMPLATE = `
-MORTGAGE AGREEMENT
-
-This Mortgage Agreement is made on {{CLOSING_DATE}}, between {{BORROWER_NAME}} ("Mortgagor") and {{COMPANY_NAME}} ("Mortgagee").
-
-1.  **Loan Amount:** The Mortgagor has borrowed {{AMOUNT}} ({{AMOUNT_IN_WORDS}}) (the "Loan") from the Mortgagee.
-2.  **Property:** The loan is secured by the property located at {{PROPERTY_ADDRESS}} (the "Property").
-3.  **Repayment:** The Mortgagor agrees to repay the Loan according to the terms of the Promissory Note signed on this date.
-
-IN WITNESS WHEREOF, the parties have executed this Mortgage Agreement as of the date first above written.
-
-_________________________
-{{BORROWER_NAME}} (Mortgagor)
-
-_________________________
-{{COMPANY_NAME}} (Mortgagee)
-`;
-
-const GUARANTY_AGREEMENT_TEMPLATE = `
-GUARANTY AGREEMENT
-
-This Guaranty Agreement is made on {{CLOSING_DATE}}, by {{GUARANTOR_NAME_INDIVIDUALLY}} ("Guarantor") in favor of {{COMPANY_NAME}} ("Lender").
-
-1.  **Guaranty:** The Guarantor unconditionally guarantees the payment of all obligations of {{BORROWER_NAME}} to the Lender, up to the amount of {{AMOUNT}} ({{AMOUNT_IN_WORDS}}).
-2.  **Consideration:** The Guarantor acknowledges receipt of good and valuable consideration for this Guaranty.
-
-IN WITNESS WHEREOF, the Guarantor has executed this Guaranty Agreement.
-
-_________________________
-{{GUARANTOR_NAME_INDIVIDUALLY}} (Guarantor)
-`;
+// --- Self-Contained Default Templates ---
 
 const PROMISSORY_NOTE_TEMPLATE = `
 {{AMOUNT}}
@@ -125,7 +94,7 @@ In carrying out the foregoing, amounts received shall be applied in the numerica
 
 (n) The occurrence of any "Event of Default" under the Mortgage or any of the other Loan Documents.
 
-6. REMEDIES. At the election of the holder hereof, and without notice, the principal balance remaining unpaid under this Note, and all unpaid interest accrued thereon and any other amounts due hereunder, shall be and become immediately due and payable in full upon the occurrence of any Event of Default. Failure to exercise this option shall not constitute a waiver of the right to exercise the same in the event of any subsequent Event of Default. No holder hereof shall, by any act of omission or commission, be deemed to waive any of its rights, remedies or powers hereunder or otherwise unless such waiver is in writing and signed by the holder hereof, and then only to the extent specifically set forth therein. The rights, remedies and powers of the holder hereof, as provided in this Note, the Mortgage and in all of the other Loan Documents are cumulative and concurrent, and may be pursued singly, successively or together against the Borrower(s) and Guarantor(s), any guarantor hereof, the Mortgaged Premises and any other security given at any time to secure the repayment hereof, all at the sole discretion of the holder hereof. If any suit or action is instituted or attorneys are employed to collect this Note or any part hereof, the Borrower(s) and Guarantor(s) promises and agrees to pay all costs of collection, including reasonable attorneys' fees and court costs.
+6. REMEDIES. At the election of the holder hereof, and without notice, the principal balance remaining unpaid under this Note, and all unpaid interest accrued thereon and any other amounts due hereunder, shall be and become immediately due and payable in full upon the occurrence of any Event of Default. Failure to exercise this option shall not constitute a waiver of the right to exercise the same in the event of any subsequent Event of Default. No holder hereof, by any act of omission or commission, be deemed to waive any of its rights, remedies or powers hereunder or otherwise unless such waiver is in writing and signed by the holder hereof, and then only to the extent specifically set forth therein. The rights, remedies and powers of the holder hereof, as provided in this Note, the Mortgage and in all of the other Loan Documents are cumulative and concurrent, and may be pursued singly, successively or together against the Borrower(s) and Guarantor(s), any guarantor hereof, the Mortgaged Premises and any other security given at any time to secure the repayment hereof, all at the sole discretion of the holder hereof. If any suit or action is instituted or attorneys are employed to collect this Note or any part hereof, the Borrower(s) and Guarantor(s) promises and agrees to pay all costs of collection, including, without limitation, reasonable attorneys' fees and court costs.
 
 7. COVENANTS AND WAIVERS. The Borrower(s) and Guarantor(s) and all others who now or may at any time become liable for all or any part of the obligations evidenced hereby, expressly agree hereby to be jointly and severally bound, and jointly and severally: (i) waive and renounce any and all homestead, redemption and exemption rights and the benefit of all valuation and appraisement privileges against the indebtedness evidenced by this Note or by any extension or renewal hereof; (ii) waive presentment and demand for payment, notices of nonpayment and of dishonor, protest of dishonor, and notice of protest; (iii) except as expressly provided in the Loan Documents, waive any and all notices in connection with the delivery and acceptance hereof and all other notices in connection with the performance, default, or enforcement of the payment hereof or hereunder; (iv) waive any and all lack of diligence and delays in the enforcement of the payment hereof; (v) agree that the liability of the Borrower(s) and Guarantor(s) and each guarantor, endorser or obligor shall be unconditional (unless otherwise limited in the Loan Documents) and without regard to the liability of any other person or entity for the payment hereof, and shall not in any manner be affected by any indulgence or forbearance granted or consented to by the Lender to any of them with respect hereto; (vi) consent to any and all extensions of time, renewals, waivers, or modifications that may be granted by the Lender with respect to the payment or other provisions hereof, and to the release of any security at any time given for the payment hereof, or any part thereof, with or without substitution, and to the release of any person or entity liable for the payment hereof; and (vii) consent to the addition of any and all other makers, endorsers, guarantors, and other obligors for the payment hereof, and to the acceptance of any and all other security for the payment hereof, and agree that the addition of any such makers, endorsers, guarantors or other obligors, or security shall not affect the liability of the Borrower(s) and Guarantor(s), any guarantor and all others now liable for all or any part of the obligations evidenced hereby. This provision is a material inducement for the Lender making the Loan to the Borrower(s) and Guarantor(s).
 
@@ -202,11 +171,48 @@ Signature Page to Secured Promissory Note
 Note #: {{BORROWER_NAME}} to Home Kapital Finance, LLC
 `;
 
-const defaultTemplates = [
+const MORTGAGE_TEMPLATE = `
+MORTGAGE AGREEMENT
+
+This Mortgage Agreement is made on {{CLOSING_DATE}}, between {{BORROWER_NAME}} ("Mortgagor") and {{COMPANY_NAME}} ("Mortgagee").
+
+1.  **Loan Amount:** The Mortgagor has borrowed {{AMOUNT}} ({{AMOUNT_IN_WORDS}}) (the "Loan") from the Mortgagee.
+2.  **Property:** The loan is secured by the property located at {{PROPERTY_ADDRESS}} (the "Property").
+3.  **Repayment:** The Mortgagor agrees to repay the Loan according to the terms of the Promissory Note signed on this date.
+
+IN WITNESS WHEREOF, the parties have executed this Mortgage Agreement as of the date first above written.
+
+_________________________
+{{BORROWER_NAME}} (Mortgagor)
+
+_________________________
+{{COMPANY_NAME}} (Mortgagee)
+`;
+
+const GUARANTY_AGREEMENT_TEMPLATE = `
+GUARANTY AGREEMENT
+
+This Guaranty Agreement is made on {{CLOSING_DATE}}, by {{GUARANTOR_NAME_INDIVIDUALLY}} ("Guarantor") in favor of {{COMPANY_NAME}} ("Lender").
+
+1.  **Guaranty:** The Guarantor unconditionally guarantees the payment of all obligations of {{BORROWER_NAME}} to the Lender, up to the amount of {{AMOUNT}} ({{AMOUNT_IN_WORDS}}).
+2.  **Consideration:** The Guarantor acknowledges receipt of good and valuable consideration for this Guaranty.
+
+IN WITNESS WHEREOF, the Guarantor has executed this Guaranty Agreement.
+
+_________________________
+{{GUARANTOR_NAME_INDIVIDUALLY}} (Guarantor)
+`;
+
+const readOnlyDefaultTemplates = [
     { name: 'Secured Promissory Note', key: 'promissory_note', content: PROMISSORY_NOTE_TEMPLATE },
     { name: 'Mortgage', key: 'mortgage', content: MORTGAGE_TEMPLATE },
     { name: 'Guaranty Agreement', key: 'guaranty', content: GUARANTY_AGREEMENT_TEMPLATE },
-];
+].map(t => ({
+    ...t,
+    id: `default-${t.key}`, // Provide a stable local ID
+    updated_at: new Date().toISOString(),
+    isReadOnly: true
+}));
 
 export interface Template {
     id: string;
@@ -214,12 +220,14 @@ export interface Template {
     key: string;
     content: string;
     updated_at: string;
+    isReadOnly?: boolean;
 }
 
 interface TemplatesContextType {
     templates: Template[];
     loading: boolean;
     updateTemplate: (templateId: string, newContent: string) => Promise<void>;
+    createTemplate: (name: string, key: string) => Promise<Template | null>;
 }
 
 export const TemplatesContext = createContext<TemplatesContextType | undefined>(undefined);
@@ -228,41 +236,37 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [templates, setTemplates] = useState<Template[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const seedInitialTemplates = async () => {
-        console.log("Seeding initial document templates...");
-        const { error } = await supabase.from('document_templates').insert(defaultTemplates);
-        if (error) {
-            console.error("Error seeding templates:", error);
-            throw error;
-        }
-        // After seeding, fetch them to populate the state
-        const { data: seededData } = await supabase.from('document_templates').select('*');
-        if (seededData) {
-            setTemplates(seededData as Template[]);
-        }
-    };
-
     const fetchTemplates = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('document_templates')
-            .select('*')
-            .order('name');
-        
-        if (error) {
-            console.error("Error fetching templates:", error);
-        } else {
-            if (data.length === 0) {
-                // Table is empty, seed it with defaults
-                try {
-                    await seedInitialTemplates();
-                } catch (seedError) {
-                    console.error("Could not initialize default templates.", seedError);
-                }
+        let finalTemplates: Template[] = [];
+
+        try {
+            const { data, error } = await supabase.from('document_templates').select('*').order('name');
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                finalTemplates = data as Template[];
             } else {
-                setTemplates(data as Template[]);
+                console.log("No templates found in DB, attempting to seed.");
+                const templatesToSeed = readOnlyDefaultTemplates.map(({ name, key, content }) => ({ name, key, content }));
+                const { error: seedError } = await supabase.from('document_templates').insert(templatesToSeed);
+                if (seedError) throw seedError;
+                
+                console.log("Seeding successful. Re-fetching templates.");
+                const { data: newData, error: newError } = await supabase.from('document_templates').select('*').order('name');
+                if (newError) throw newError;
+                
+                if (newData) {
+                    finalTemplates = newData as Template[];
+                }
             }
+        } catch (err) {
+            console.error("Could not fetch or seed templates from database. Falling back to read-only defaults.", err);
+            // Fallback to local, read-only templates
+            finalTemplates = readOnlyDefaultTemplates;
         }
+
+        setTemplates(finalTemplates);
         setLoading(false);
     }, []);
 
@@ -271,6 +275,11 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, [fetchTemplates]);
 
     const updateTemplate = async (templateId: string, newContent: string) => {
+        const templateToUpdate = templates.find(t => t.id === templateId);
+        if (templateToUpdate?.isReadOnly) {
+            throw new Error("Cannot save read-only default templates. Please configure the database connection.");
+        }
+
         const { data, error } = await supabase
             .from('document_templates')
             .update({ content: newContent, updated_at: new Date().toISOString() })
@@ -287,8 +296,35 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
             setTemplates(prev => prev.map(t => t.id === templateId ? (data as Template) : t));
         }
     };
+    
+    const createTemplate = async (name: string, key: string): Promise<Template | null> => {
+        const newTemplateData = {
+            name,
+            key,
+            content: `<!-- Start writing your new '${name}' template here. -->`,
+        };
 
-    const value = { templates, loading, updateTemplate };
+        const { data, error } = await supabase
+            .from('document_templates')
+            .insert(newTemplateData)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error creating template:", error);
+            throw error;
+        }
+
+        if (data) {
+            const createdTemplate = data as Template;
+            setTemplates(prev => [createdTemplate, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+            return createdTemplate;
+        }
+        
+        return null;
+    };
+
+    const value = { templates, loading, updateTemplate, createTemplate };
 
     return (
         <TemplatesContext.Provider value={value}>

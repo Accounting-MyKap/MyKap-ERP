@@ -6,10 +6,10 @@ import { Prospect } from './types';
 import { formatCurrency, formatPercent, numberToWords } from '../../utils/formatters';
 import { useToast } from '../../hooks/useToast';
 import { useTemplates } from '../../hooks/useTemplates';
+import { MyKapLogo } from '../../components/icons';
 
 type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
 
-// FIX: Define the props interface for the component.
 interface GenerateDocumentModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -23,22 +23,13 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
     
     const documentOptions = templates.map(t => ({ name: t.name, key: t.key as DocumentKey }));
 
-    // Reset state when modal opens or prospect changes
     useEffect(() => {
         if (isOpen) {
             setSelectedDocKey('promissory_note');
         }
     }, [isOpen, prospect]);
 
-    const handleDownload = () => {
-        const docTemplate = templates.find(t => t.key === selectedDocKey);
-        if (!docTemplate) {
-            showToast('Selected document template could not be found.', 'error');
-            return;
-        }
-
-        let template = docTemplate.content;
-        
+    const processTemplate = (template: string): string => {
         // --- Data Gathering ---
         const primaryProperty = prospect.properties?.find(p => p.is_primary);
         const propertyAddress = primaryProperty 
@@ -66,18 +57,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             ? guarantorName
             : prospect.borrower_name;
 
-        const additionalSignatories = (prospect.co_borrowers || []).filter(
-            cb => cb.id !== guarantor?.id
-        );
-
-        let additionalSignaturesBlock = '';
-        if (additionalSignatories.length > 0) {
-            additionalSignaturesBlock = additionalSignatories.map(cb => `
-By: _________________________ Date: _________________________
-${cb.full_name}, ${cb.relation_type || 'Co-Borrower'}
-`).join('\n');
-        }
-
+        // --- Basic Replacements ---
         const replacements: { [key: string]: string } = {
             '{{BORROWER_NAME}}': prospect.borrower_name,
             '{{COMPANY_NAME}}': "Home Kapital Finance, LLC",
@@ -98,40 +78,99 @@ ${cb.full_name}, ${cb.relation_type || 'Co-Borrower'}
             '{{NUMBER_OF_MONTHS_IN_WORDS}}': numberToWords(prospect.terms?.loan_term_months) || '[# MONTHS IN WORDS]',
             '{{MONTHLY_INSTALLMENT}}': formatCurrency(prospect.terms?.monthly_payment),
             '{{STATE}}': prospect.state || '[STATE]',
-            '{{ADDITIONAL_SIGNATURES}}': additionalSignaturesBlock,
         };
 
+        let processedContent = template;
         for (const [key, value] of Object.entries(replacements)) {
-            template = template.replace(new RegExp(key.replace(/\{\{/g, '{{').replace(/\}\}/g, '}}'), 'g'), value || '');
+            processedContent = processedContent.replace(new RegExp(key.replace(/\{\{/g, '{{').replace(/\}\}/g, '}}'), 'g'), value || '');
+        }
+        
+        // --- Conditional Blocks ---
+        const hasCoBorrowers = prospect.co_borrowers && prospect.co_borrowers.length > 0;
+        processedContent = processedContent.replace(/{{\#if co_borrowers}}(.*?){{\/if}}/gs, hasCoBorrowers ? '$1' : '');
+
+        // --- Loop Blocks ---
+        processedContent = processedContent.replace(/{{\#each co_borrowers}}(.*?){{\/each}}/gs, (match, innerTemplate) => {
+            if (!hasCoBorrowers) return '';
+            return (prospect.co_borrowers || []).map(cb => {
+                return innerTemplate
+                    .replace(/{{this\.full_name}}/g, cb.full_name || '')
+                    .replace(/{{this\.relation_type}}/g, cb.relation_type || 'Co-Borrower');
+            }).join('');
+        });
+
+        return processedContent;
+    };
+
+    const handleDownload = async () => {
+        const docTemplate = templates.find(t => t.key === selectedDocKey);
+        if (!docTemplate) {
+            showToast('Selected document template could not be found.', 'error');
+            return;
         }
 
         try {
+            const processedText = processTemplate(docTemplate.content);
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' });
+            
             const margin = 15;
             const pageHeight = doc.internal.pageSize.getHeight();
             const pageWidth = doc.internal.pageSize.getWidth();
             const maxWidth = pageWidth - margin * 2;
             let y = margin;
             const lineHeight = 6;
-
+            
             doc.setFont('times', 'normal');
             doc.setFontSize(11);
 
-            const lines = doc.splitTextToSize(template, maxWidth);
-            lines.forEach((line: string) => {
-                if (y + lineHeight > pageHeight - margin) {
-                    doc.addPage();
-                    y = margin; 
+            const textParts = processedText.split('{{COMPANY_LOGO}}');
+
+            // --- Logo Handling ---
+            let logoDataUrl = '';
+            try {
+                const logoResponse = await fetch("https://storage.googleapis.com/assets_co-investment_simulator/logo.png");
+                const logoBlob = await logoResponse.blob();
+                logoDataUrl = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.readAsDataURL(logoBlob);
+                });
+            } catch (e) {
+                console.error("Could not load logo image, skipping.", e);
+            }
+
+            for (let i = 0; i < textParts.length; i++) {
+                const part = textParts[i];
+                const lines = doc.splitTextToSize(part, maxWidth);
+
+                lines.forEach((line: string) => {
+                    if (y + lineHeight > pageHeight - margin) {
+                        doc.addPage();
+                        y = margin;
+                    }
+                    doc.text(line, margin, y);
+                    y += lineHeight;
+                });
+
+                // Add logo if it's not the last part and logo is available
+                if (i < textParts.length - 1 && logoDataUrl) {
+                    const logoWidth = 50;
+                    const logoHeight = (logoWidth / 2.5); // Assuming aspect ratio
+                    if (y + logoHeight > pageHeight - margin) {
+                        doc.addPage();
+                        y = margin;
+                    }
+                    doc.addImage(logoDataUrl, 'PNG', margin, y, logoWidth, logoHeight);
+                    y += logoHeight + 2; // Add some padding
                 }
-                doc.text(line, margin, y);
-                y += lineHeight;
-            });
+            }
 
             const filename = `${prospect.prospect_code}-${docTemplate.name.replace(/ /g, '-')}.pdf`;
             doc.save(filename);
 
             showToast('PDF document generated successfully!', 'success');
             onClose();
+
         } catch (err) {
             console.error(err);
             showToast('Failed to generate PDF document.', 'error');

@@ -4,22 +4,31 @@ import Header from '../../components/Header';
 import { useTemplates } from '../../hooks/useTemplates';
 import TemplateList from './TemplateList';
 import TemplateEditor from './TemplateEditor';
+import NewTemplateModal from './NewTemplateModal';
 
 const TemplatesPage: React.FC = () => {
-    const { templates, loading, updateTemplate } = useTemplates();
+    const { templates, loading, updateTemplate, createTemplate } = useTemplates();
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+    const [isNewTemplateModalOpen, setIsNewTemplateModalOpen] = useState(false);
 
     const selectedTemplate = useMemo(() => {
         return templates.find(t => t.id === selectedTemplateId) || null;
     }, [templates, selectedTemplateId]);
     
-    // FIX: Removed redundant and incorrect useState call. The useEffect below correctly handles this logic.
     // Select the first template by default once loaded
      useEffect(() => {
         if (!loading && templates.length > 0 && !selectedTemplateId) {
             setSelectedTemplateId(templates[0].id);
         }
     }, [loading, templates, selectedTemplateId]);
+
+    const handleCreateTemplate = async (name: string, key: string) => {
+        const newTemplate = await createTemplate(name, key);
+        if (newTemplate) {
+            // Automatically select the new template for editing
+            setSelectedTemplateId(newTemplate.id);
+        }
+    };
 
     return (
         <DashboardLayout>
@@ -34,6 +43,7 @@ const TemplatesPage: React.FC = () => {
                             templates={templates}
                             selectedTemplateId={selectedTemplateId}
                             onSelectTemplate={setSelectedTemplateId}
+                            onNewTemplate={() => setIsNewTemplateModalOpen(true)}
                         />
                     )}
                 </div>
@@ -44,6 +54,13 @@ const TemplatesPage: React.FC = () => {
                     />
                 </div>
             </div>
+
+            <NewTemplateModal
+                isOpen={isNewTemplateModalOpen}
+                onClose={() => setIsNewTemplateModalOpen(false)}
+                onSave={handleCreateTemplate}
+            />
+
         </DashboardLayout>
     );
 };

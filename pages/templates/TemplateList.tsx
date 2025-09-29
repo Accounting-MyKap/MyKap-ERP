@@ -1,19 +1,28 @@
 import React from 'react';
 import { Template } from '../../contexts/TemplatesContext';
+import { AddIcon } from '../../components/icons';
 
 interface TemplateListProps {
     templates: Template[];
     selectedTemplateId: string | null;
     onSelectTemplate: (id: string) => void;
+    onNewTemplate: () => void;
 }
 
-const TemplateList: React.FC<TemplateListProps> = ({ templates, selectedTemplateId, onSelectTemplate }) => {
+const TemplateList: React.FC<TemplateListProps> = ({ templates, selectedTemplateId, onSelectTemplate, onNewTemplate }) => {
     return (
-        <div className="h-full border-r bg-white">
-            <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold text-gray-800">Document Templates</h2>
+        <div className="h-full border-r bg-white flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-800">Documents</h2>
+                <button
+                    onClick={onNewTemplate}
+                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                    title="Create New Template"
+                >
+                    <AddIcon className="h-5 w-5" />
+                </button>
             </div>
-            <nav className="p-2 space-y-1">
+            <nav className="p-2 space-y-1 flex-grow overflow-y-auto">
                 {templates.map(template => (
                     <button
                         key={template.id}
