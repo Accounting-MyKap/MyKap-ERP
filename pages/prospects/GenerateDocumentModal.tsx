@@ -1,12 +1,20 @@
 // pages/prospects/GenerateDocumentModal.tsx
 import React, { useState, useEffect } from 'react';
-import { jsPDF } from 'jspdf';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+import htmlToPdfmake from 'html-to-pdfmake';
+
 import Modal from '../../components/ui/Modal';
 import { Prospect } from './types';
 import { formatCurrency, formatPercent, numberToWords } from '../../utils/formatters';
 import { useToast } from '../../hooks/useToast';
 import { useTemplates } from '../../hooks/useTemplates';
-import { MyKapLogo } from '../../components/icons';
+
+// Set up pdfmake virtual file system
+if (pdfMake.vfs === undefined) {
+  pdfMake.vfs = pdfFonts.pdfMake.vfs;
+}
+
 
 type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
 
@@ -98,6 +106,12 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                     .replace(/{{this\.relation_type}}/g, cb.relation_type || 'Co-Borrower');
             }).join('');
         });
+        
+         // --- Logo Placeholder ---
+        processedContent = processedContent.replace(
+            /\{\{COMPANY_LOGO\}\}/g,
+            `<img src="https://storage.googleapis.com/assets_co-investment_simulator/logo.png" style="width: 150px;" />`
+        );
 
         return processedContent;
     };
@@ -110,63 +124,29 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
         }
 
         try {
-            const processedText = processTemplate(docTemplate.content);
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' });
-            
-            const margin = 15;
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const maxWidth = pageWidth - margin * 2;
-            let y = margin;
-            const lineHeight = 6;
-            
-            doc.setFont('times', 'normal');
-            doc.setFontSize(11);
+            const processedHtml = processTemplate(docTemplate.content);
+            const contentForPdf = htmlToPdfmake(processedHtml);
 
-            const textParts = processedText.split('{{COMPANY_LOGO}}');
-
-            // --- Logo Handling ---
-            let logoDataUrl = '';
-            try {
-                const logoResponse = await fetch("https://storage.googleapis.com/assets_co-investment_simulator/logo.png");
-                const logoBlob = await logoResponse.blob();
-                logoDataUrl = await new Promise(resolve => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result as string);
-                    reader.readAsDataURL(logoBlob);
-                });
-            } catch (e) {
-                console.error("Could not load logo image, skipping.", e);
-            }
-
-            for (let i = 0; i < textParts.length; i++) {
-                const part = textParts[i];
-                const lines = doc.splitTextToSize(part, maxWidth);
-
-                lines.forEach((line: string) => {
-                    if (y + lineHeight > pageHeight - margin) {
-                        doc.addPage();
-                        y = margin;
+            const docDefinition = {
+                content: contentForPdf,
+                defaultStyle: {
+                    font: 'Times'
+                },
+                 styles: {
+                    'ql-align-center': {
+                        alignment: 'center'
+                    },
+                    'ql-align-right': {
+                        alignment: 'right'
+                    },
+                    'ql-align-justify': {
+                        alignment: 'justify'
                     }
-                    doc.text(line, margin, y);
-                    y += lineHeight;
-                });
-
-                // Add logo if it's not the last part and logo is available
-                if (i < textParts.length - 1 && logoDataUrl) {
-                    const logoWidth = 50;
-                    const logoHeight = (logoWidth / 2.5); // Assuming aspect ratio
-                    if (y + logoHeight > pageHeight - margin) {
-                        doc.addPage();
-                        y = margin;
-                    }
-                    doc.addImage(logoDataUrl, 'PNG', margin, y, logoWidth, logoHeight);
-                    y += logoHeight + 2; // Add some padding
                 }
-            }
-
+            };
+            
             const filename = `${prospect.prospect_code}-${docTemplate.name.replace(/ /g, '-')}.pdf`;
-            doc.save(filename);
+            pdfMake.createPdf(docDefinition).download(filename);
 
             showToast('PDF document generated successfully!', 'success');
             onClose();

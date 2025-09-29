@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Quill from 'quill';
 import { Template } from '../../contexts/TemplatesContext';
 import { useToast } from '../../hooks/useToast';
-import { InformationCircleIcon, MyKapLogo, ImagePlaceholderIcon } from '../../components/icons';
+import { InformationCircleIcon, MyKapLogo } from '../../components/icons';
 
 interface TemplateEditorProps {
     template: Template | null;
@@ -35,24 +36,47 @@ const CO_BORROWER_LOOP_PLACEHOLDERS = [
     { placeholder: '{{this.relation_type}}', description: 'Their relation to the loan (e.g., Co-Borrower, Guarantor).' }
 ];
 
+const quillToolbarOptions = [
+  [{ 'header': [1, 2, 3, false] }],
+  ['bold', 'italic', 'underline'],
+  [{ 'align': [] }],
+  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+  [{ 'indent': '-1'}, { 'indent': '+1' }],
+  ['clean']
+];
+
+
 const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => {
-    const [content, setContent] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const { showToast } = useToast();
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const quillRef = useRef<Quill | null>(null);
+    const editorRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (template) {
-            setContent(template.content);
-        } else {
-            setContent('');
+        if (editorRef.current && !quillRef.current && template) {
+            const quill = new Quill(editorRef.current, {
+                modules: {
+                    toolbar: quillToolbarOptions,
+                },
+                theme: 'snow',
+            });
+            quillRef.current = quill;
         }
+
+        if (quillRef.current && template) {
+            quillRef.current.root.innerHTML = template.content;
+            quillRef.current.enable(!template.isReadOnly);
+        } else if (quillRef.current) {
+             quillRef.current.root.innerHTML = '';
+        }
+
     }, [template]);
 
     const handleSave = async () => {
-        if (!template) return;
+        if (!template || !quillRef.current) return;
         setIsSaving(true);
         try {
+            const content = quillRef.current.root.innerHTML;
             await onSave(template.id, content);
             showToast('Template saved successfully!', 'success');
         } catch (error: any) {
@@ -63,17 +87,10 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     };
 
     const handleInsertText = (textToInsert: string) => {
-        const textarea = textAreaRef.current;
-        if (textarea) {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = textarea.value;
-            const newText = text.substring(0, start) + textToInsert + text.substring(end);
-            setContent(newText);
-            textarea.focus();
-            setTimeout(() => {
-                textarea.selectionStart = textarea.selectionEnd = start + textToInsert.length;
-            }, 0);
+        const quill = quillRef.current;
+        if (quill) {
+            const range = quill.getSelection(true);
+            quill.insertText(range.index, textToInsert);
         }
     };
 
@@ -88,8 +105,8 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     const isReadOnly = template.isReadOnly;
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="p-4 border-b bg-white rounded-t-lg">
+        <div className="flex flex-col h-full bg-white rounded-r-lg">
+            <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-800">{template.name}</h2>
                     <button
@@ -114,15 +131,8 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 </div>
             )}
             <div className="flex-grow flex min-h-0">
-                <div className="flex-grow p-4">
-                    <textarea
-                        ref={textAreaRef}
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        readOnly={isReadOnly}
-                        className={`w-full h-full p-4 border rounded-md font-mono text-sm resize-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'bg-gray-100' : ''}`}
-                        placeholder="Enter template content here..."
-                    />
+                <div className="flex-grow p-4 relative h-full">
+                    <div ref={editorRef} className={`h-full ${isReadOnly ? 'bg-gray-100' : ''}`} style={{ minHeight: 'calc(100% - 50px)' }}></div>
                 </div>
                 <aside className="w-80 border-l bg-gray-50 p-4 overflow-y-auto">
                     <h3 className="font-semibold text-gray-700 mb-3">Assets & Logic Blocks</h3>
