@@ -129,6 +129,11 @@ export const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.742-.587 9.094 9.094 0 003.742.587M18 18.72V19.5a2.25 2.25 0 01-2.25 2.25H8.25A2.25 2.25 0 016 19.5V18.72m12 0c-2.246 0-4.32-.63-6-1.72m-6 1.72c-1.68-.63-3.098-1.72-4.14-3.04M18 18.72c-2.246 0-4.32-.63-6-1.72m6 1.72c-1.68-.63-3.098-1.72-4.14-3.04m-2.16-5.84a6.75 6.75 0 1013.5 0 6.75 6.75 0 00-13.5 0z" /></Icon>
 );
 
+export const TemplateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></Icon>
+);
+
+
 export const DollarCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></Icon>
 );

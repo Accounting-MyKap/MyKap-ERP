@@ -3,38 +3,41 @@ import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import Modal from '../../components/ui/Modal';
 import { Prospect } from './types';
-import { MORTGAGE_TEMPLATE, GUARANTY_AGREEMENT_TEMPLATE, PROMISSORY_NOTE_TEMPLATE } from './documentTemplates';
 import { formatCurrency, formatPercent, numberToWords } from '../../utils/formatters';
 import { useToast } from '../../hooks/useToast';
+import { useTemplates } from '../../hooks/useTemplates';
 
+type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
+
+// FIX: Define the props interface for the component.
 interface GenerateDocumentModalProps {
     isOpen: boolean;
     onClose: () => void;
     prospect: Prospect;
 }
 
-const documentOptions = {
-    promissory_note: { name: 'Secured Promissory Note', template: PROMISSORY_NOTE_TEMPLATE, filename: 'Secured-Promissory-Note.pdf' },
-    mortgage: { name: 'Mortgage', template: MORTGAGE_TEMPLATE, filename: 'Mortgage.pdf' },
-    guaranty: { name: 'Guaranty Agreement', template: GUARANTY_AGREEMENT_TEMPLATE, filename: 'Guaranty-Agreement.pdf' },
-};
-
-type DocumentKey = keyof typeof documentOptions;
-
 const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, onClose, prospect }) => {
-    const [selectedDoc, setSelectedDoc] = useState<DocumentKey>('promissory_note');
+    const [selectedDocKey, setSelectedDocKey] = useState<DocumentKey>('promissory_note');
+    const { templates, loading: templatesLoading } = useTemplates();
     const { showToast } = useToast();
+    
+    const documentOptions = templates.map(t => ({ name: t.name, key: t.key as DocumentKey }));
 
     // Reset state when modal opens or prospect changes
     useEffect(() => {
         if (isOpen) {
-            setSelectedDoc('promissory_note');
+            setSelectedDocKey('promissory_note');
         }
     }, [isOpen, prospect]);
 
     const handleDownload = () => {
-        const docInfo = documentOptions[selectedDoc];
-        let template = docInfo.template;
+        const docTemplate = templates.find(t => t.key === selectedDocKey);
+        if (!docTemplate) {
+            showToast('Selected document template could not be found.', 'error');
+            return;
+        }
+
+        let template = docTemplate.content;
         
         // --- Data Gathering ---
         const primaryProperty = prospect.properties?.find(p => p.is_primary);
@@ -45,9 +48,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
         const guarantor = prospect.co_borrowers?.find(cb => cb.relation_type === 'Guarantor');
         const guarantorName = guarantor ? guarantor.full_name : '[GUARANTOR NOT FOUND]';
         
-        // This is for display in the main body of the document
         let borrowerEntityDesc = '';
-        // This is for the notice/address section specifically
         let borrowerNoticeAddress = '';
         
         if (prospect.borrower_type === 'individual') {
@@ -65,6 +66,17 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             ? guarantorName
             : prospect.borrower_name;
 
+        const additionalSignatories = (prospect.co_borrowers || []).filter(
+            cb => cb.id !== guarantor?.id
+        );
+
+        let additionalSignaturesBlock = '';
+        if (additionalSignatories.length > 0) {
+            additionalSignaturesBlock = additionalSignatories.map(cb => `
+By: _________________________ Date: _________________________
+${cb.full_name}, ${cb.relation_type || 'Co-Borrower'}
+`).join('\n');
+        }
 
         const replacements: { [key: string]: string } = {
             '{{BORROWER_NAME}}': prospect.borrower_name,
@@ -85,34 +97,27 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             '{{NUMBER_OF_MONTHS}}': String(prospect.terms?.loan_term_months || '[# MONTHS]'),
             '{{NUMBER_OF_MONTHS_IN_WORDS}}': numberToWords(prospect.terms?.loan_term_months) || '[# MONTHS IN WORDS]',
             '{{MONTHLY_INSTALLMENT}}': formatCurrency(prospect.terms?.monthly_payment),
-            '{{STATE}}': prospect.state || '[STATE]'
+            '{{STATE}}': prospect.state || '[STATE]',
+            '{{ADDITIONAL_SIGNATURES}}': additionalSignaturesBlock,
         };
 
-        // --- Template Filling ---
         for (const [key, value] of Object.entries(replacements)) {
-            template = template.replace(new RegExp(key.replace(/\{\{/g, '{{').replace(/\}\}/g, '}}'), 'g'), value);
+            template = template.replace(new RegExp(key.replace(/\{\{/g, '{{').replace(/\}\}/g, '}}'), 'g'), value || '');
         }
 
-        // --- PDF Generation ---
         try {
-            const doc = new jsPDF({
-                orientation: 'p',
-                unit: 'mm',
-                format: 'letter' // US Letter size
-            });
-
-            const margin = 15; // mm
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' });
+            const margin = 15;
             const pageHeight = doc.internal.pageSize.getHeight();
             const pageWidth = doc.internal.pageSize.getWidth();
             const maxWidth = pageWidth - margin * 2;
             let y = margin;
-            const lineHeight = 6; // mm for 11pt font size
+            const lineHeight = 6;
 
             doc.setFont('times', 'normal');
             doc.setFontSize(11);
 
             const lines = doc.splitTextToSize(template, maxWidth);
-
             lines.forEach((line: string) => {
                 if (y + lineHeight > pageHeight - margin) {
                     doc.addPage();
@@ -122,7 +127,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                 y += lineHeight;
             });
 
-            const filename = `${prospect.prospect_code}-${docInfo.filename.replace('.pdf','')}.pdf`;
+            const filename = `${prospect.prospect_code}-${docTemplate.name.replace(/ /g, '-')}.pdf`;
             doc.save(filename);
 
             showToast('PDF document generated successfully!', 'success');
@@ -140,13 +145,18 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                     <label htmlFor="docType" className="block text-sm font-medium text-gray-700">Select Document Type</label>
                     <select
                         id="docType"
-                        value={selectedDoc}
-                        onChange={(e) => setSelectedDoc(e.target.value as DocumentKey)}
+                        value={selectedDocKey}
+                        onChange={(e) => setSelectedDocKey(e.target.value as DocumentKey)}
                         className="input-field mt-1"
+                        disabled={templatesLoading}
                     >
-                        {Object.entries(documentOptions).map(([key, { name }]) => (
-                            <option key={key} value={key}>{name}</option>
-                        ))}
+                        {templatesLoading ? (
+                            <option>Loading templates...</option>
+                        ) : (
+                            documentOptions.map(({ key, name }) => (
+                                <option key={key} value={key}>{name}</option>
+                            ))
+                        )}
                     </select>
                 </div>
 
@@ -156,7 +166,8 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700"
+                        disabled={templatesLoading}
+                        className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300"
                     >
                         Download PDF
                     </button>

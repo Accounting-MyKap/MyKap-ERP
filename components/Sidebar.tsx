@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MyKapLogo, MyKapIcon, HomeIcon, ProspectsIcon, CreditsIcon, LendersIcon, MenuIcon, UsersIcon } from './icons';
+import { MyKapLogo, MyKapIcon, HomeIcon, ProspectsIcon, CreditsIcon, LendersIcon, MenuIcon, UsersIcon, TemplateIcon } from './icons';
 import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
@@ -21,6 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
 
   const adminNavItems = [
     { name: 'Users', path: '/users', icon: UsersIcon, role: 'admin' },
+    { name: 'Templates', path: '/templates', icon: TemplateIcon, role: 'admin' },
   ];
 
   const isActive = (path: string) => location.pathname.startsWith(path);

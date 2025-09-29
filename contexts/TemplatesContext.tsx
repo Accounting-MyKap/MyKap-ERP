@@ -1,6 +1,8 @@
-// pages/prospects/documentTemplates.ts
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { supabase } from '../services/supabase';
 
-export const MORTGAGE_TEMPLATE = `
+// Re-define the original templates here for the one-time seeding process
+const MORTGAGE_TEMPLATE = `
 MORTGAGE AGREEMENT
 
 This Mortgage Agreement is made on {{CLOSING_DATE}}, between {{BORROWER_NAME}} ("Mortgagor") and {{COMPANY_NAME}} ("Mortgagee").
@@ -18,7 +20,7 @@ _________________________
 {{COMPANY_NAME}} (Mortgagee)
 `;
 
-export const GUARANTY_AGREEMENT_TEMPLATE = `
+const GUARANTY_AGREEMENT_TEMPLATE = `
 GUARANTY AGREEMENT
 
 This Guaranty Agreement is made on {{CLOSING_DATE}}, by {{GUARANTOR_NAME_INDIVIDUALLY}} ("Guarantor") in favor of {{COMPANY_NAME}} ("Lender").
@@ -32,7 +34,7 @@ _________________________
 {{GUARANTOR_NAME_INDIVIDUALLY}} (Guarantor)
 `;
 
-export const PROMISSORY_NOTE_TEMPLATE = `
+const PROMISSORY_NOTE_TEMPLATE = `
 {{AMOUNT}}
 
 SECURED PROMISSORY NOTE
@@ -199,3 +201,98 @@ Diego Felipe Quesada, Member
 Signature Page to Secured Promissory Note
 Note #: {{BORROWER_NAME}} to Home Kapital Finance, LLC
 `;
+
+const defaultTemplates = [
+    { name: 'Secured Promissory Note', key: 'promissory_note', content: PROMISSORY_NOTE_TEMPLATE },
+    { name: 'Mortgage', key: 'mortgage', content: MORTGAGE_TEMPLATE },
+    { name: 'Guaranty Agreement', key: 'guaranty', content: GUARANTY_AGREEMENT_TEMPLATE },
+];
+
+export interface Template {
+    id: string;
+    name: string;
+    key: string;
+    content: string;
+    updated_at: string;
+}
+
+interface TemplatesContextType {
+    templates: Template[];
+    loading: boolean;
+    updateTemplate: (templateId: string, newContent: string) => Promise<void>;
+}
+
+export const TemplatesContext = createContext<TemplatesContextType | undefined>(undefined);
+
+export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [templates, setTemplates] = useState<Template[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const seedInitialTemplates = async () => {
+        console.log("Seeding initial document templates...");
+        const { error } = await supabase.from('document_templates').insert(defaultTemplates);
+        if (error) {
+            console.error("Error seeding templates:", error);
+            throw error;
+        }
+        // After seeding, fetch them to populate the state
+        const { data: seededData } = await supabase.from('document_templates').select('*');
+        if (seededData) {
+            setTemplates(seededData as Template[]);
+        }
+    };
+
+    const fetchTemplates = useCallback(async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('document_templates')
+            .select('*')
+            .order('name');
+        
+        if (error) {
+            console.error("Error fetching templates:", error);
+        } else {
+            if (data.length === 0) {
+                // Table is empty, seed it with defaults
+                try {
+                    await seedInitialTemplates();
+                } catch (seedError) {
+                    console.error("Could not initialize default templates.", seedError);
+                }
+            } else {
+                setTemplates(data as Template[]);
+            }
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        fetchTemplates();
+    }, [fetchTemplates]);
+
+    const updateTemplate = async (templateId: string, newContent: string) => {
+        const { data, error } = await supabase
+            .from('document_templates')
+            .update({ content: newContent, updated_at: new Date().toISOString() })
+            .eq('id', templateId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Error updating template:", error);
+            throw error;
+        }
+
+        if (data) {
+            setTemplates(prev => prev.map(t => t.id === templateId ? (data as Template) : t));
+        }
+    };
+
+    const value = { templates, loading, updateTemplate };
+
+    return (
+        <TemplatesContext.Provider value={value}>
+            {children}
+        </TemplatesContext.Provider>
+    );
+};
