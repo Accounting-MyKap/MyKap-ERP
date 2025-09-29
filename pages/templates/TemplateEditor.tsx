@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Quill from 'quill';
 import { Template } from '../../contexts/TemplatesContext';
 import { useToast } from '../../hooks/useToast';
@@ -51,6 +51,43 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     const { showToast } = useToast();
     const quillRef = useRef<Quill | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
+    
+    // State and refs for resizable sidebar
+    const [sidebarWidth, setSidebarWidth] = useState(320); // initial width w-80
+    const isResizingRef = useRef(false);
+
+    // --- Resizing Logic ---
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!isResizingRef.current) return;
+        const newWidth = window.innerWidth - e.clientX;
+        const minWidth = 280; // min width constraint
+        const maxWidth = 640; // max width constraint
+        if (newWidth >= minWidth && newWidth <= maxWidth) {
+            setSidebarWidth(newWidth);
+        }
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        isResizingRef.current = false;
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    }, [handleMouseMove]);
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        isResizingRef.current = true;
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    };
+
+    // Effect for cleaning up global listeners
+    useEffect(() => {
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [handleMouseMove, handleMouseUp]);
+
 
     useEffect(() => {
         if (editorRef.current && !quillRef.current && template) {
@@ -61,15 +98,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 theme: 'snow',
             });
             
-            // FIX: Override the default alignment handler to ensure it only formats the selected line(s).
-            // This prevents the issue where aligning a selection would incorrectly align the entire document.
-            // FIX: Cast toolbar to 'any' since getModule returns 'unknown' and we need to access 'addHandler'.
             const toolbar = quill.getModule('toolbar') as any;
-            toolbar.addHandler('align', function (value: any) {
-                const quillInstance = (this as any).quill;
-                const range = quillInstance.getSelection();
+            toolbar.addHandler('align', function (this: {quill: Quill}, value: any) {
+                const range = this.quill.getSelection();
                 if (range) {
-                    quillInstance.formatLine(range.index, range.length, 'align', value);
+                    this.quill.formatLine(range.index, range.length, 'align', value);
                 }
             });
 
@@ -144,11 +177,22 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 </div>
             )}
             <div className="flex-grow flex min-h-0">
-                {/* FIX: Editor container now scrolls independently, preventing it from stretching the parent and breaking the aside's layout. */}
+                {/* Editor container */}
                 <div className="flex-grow relative overflow-y-auto">
-                    <div ref={editorRef} className={`p-4 ${isReadOnly ? 'bg-gray-100' : ''}`}></div>
+                    <div ref={editorRef} className={`p-4 h-full ${isReadOnly ? 'bg-gray-100' : ''}`}></div>
                 </div>
-                <aside className="w-80 border-l bg-gray-50 p-4 overflow-y-auto">
+
+                {/* Resize Handle */}
+                <div
+                    onMouseDown={handleMouseDown}
+                    className="w-1.5 flex-shrink-0 cursor-col-resize bg-gray-200 hover:bg-blue-400 active:bg-blue-500 transition-colors duration-200"
+                    title="Resize sidebar"
+                />
+                
+                <aside 
+                    style={{ width: `${sidebarWidth}px` }}
+                    className="flex-shrink-0 border-l bg-gray-50 p-4 overflow-y-auto"
+                >
                     <h3 className="font-semibold text-gray-700 mb-3">Assets & Logic Blocks</h3>
                     <div className="space-y-4">
                         {/* Assets Section */}
