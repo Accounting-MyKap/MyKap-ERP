@@ -60,6 +60,19 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 },
                 theme: 'snow',
             });
+            
+            // FIX: Override the default alignment handler to ensure it only formats the selected line(s).
+            // This prevents the issue where aligning a selection would incorrectly align the entire document.
+            // FIX: Cast toolbar to 'any' since getModule returns 'unknown' and we need to access 'addHandler'.
+            const toolbar = quill.getModule('toolbar') as any;
+            toolbar.addHandler('align', function (value: any) {
+                const quillInstance = (this as any).quill;
+                const range = quillInstance.getSelection();
+                if (range) {
+                    quillInstance.formatLine(range.index, range.length, 'align', value);
+                }
+            });
+
             quillRef.current = quill;
         }
 
@@ -131,8 +144,9 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 </div>
             )}
             <div className="flex-grow flex min-h-0">
-                <div className="flex-grow p-4 relative h-full">
-                    <div ref={editorRef} className={`h-full ${isReadOnly ? 'bg-gray-100' : ''}`} style={{ minHeight: 'calc(100% - 50px)' }}></div>
+                {/* FIX: Editor container now scrolls independently, preventing it from stretching the parent and breaking the aside's layout. */}
+                <div className="flex-grow relative overflow-y-auto">
+                    <div ref={editorRef} className={`p-4 ${isReadOnly ? 'bg-gray-100' : ''}`}></div>
                 </div>
                 <aside className="w-80 border-l bg-gray-50 p-4 overflow-y-auto">
                     <h3 className="font-semibold text-gray-700 mb-3">Assets & Logic Blocks</h3>
@@ -151,7 +165,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                             <h4 className="text-sm font-semibold text-gray-600 mb-2">Conditional Blocks</h4>
                             <div className="p-2 bg-white border rounded-md">
                                 <p className="text-xs text-gray-500 mb-2">Show content only if co-borrowers exist.</p>
-                                <button onClick={() => handleInsertText('{{#if co_borrowers}}\n  <!-- Content for when co-borrowers exist -->\n{{/if}}')} className="font-mono text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">Insert Co-Borrower Block</button>
+                                <button onClick={() => handleInsertText('{{#if co_borrowers}}\\n  <!-- Content for when co-borrowers exist -->\\n{{/if}}')} className="font-mono text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">Insert Co-Borrower Block</button>
                             </div>
                         </div>
                         
@@ -160,7 +174,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                             <h4 className="text-sm font-semibold text-gray-600 mb-2">Looping Blocks</h4>
                              <div className="p-2 bg-white border rounded-md space-y-3">
                                 <p className="text-xs text-gray-500">Repeat content for each co-borrower.</p>
-                                <button onClick={() => handleInsertText('{{#each co_borrowers}}\n  <p>{{this.full_name}}, {{this.relation_type}}</p>\n{{/each}}')} className="font-mono text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">Insert Co-Borrower Loop</button>
+                                <button onClick={() => handleInsertText('{{#each co_borrowers}}\\n  <p>{{this.full_name}}, {{this.relation_type}}</p>\\n{{/each}}')} className="font-mono text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100">Insert Co-Borrower Loop</button>
                                 <div>
                                     <p className="text-xs font-medium text-gray-600 mb-1">Available fields inside loop:</p>
                                     {CO_BORROWER_LOOP_PLACEHOLDERS.map(({ placeholder, description }) => (
