@@ -30,10 +30,10 @@ const loadTimesNewRomanFonts = async () => {
 
     try {
         const fontFiles = {
-            'Times-Roman.ttf': 'https://cdn.jsdelivr.net/gh/pmo-e/web-fonts/Times%20New%20Roman/times.ttf',
-            'Times-Bold.ttf': 'https://cdn.jsdelivr.net/gh/pmo-e/web-fonts/Times%20New%20Roman/timesbd.ttf',
-            'Times-Italic.ttf': 'https://cdn.jsdelivr.net/gh/pmo-e/web-fonts/Times%20New%20Roman/timesi.ttf',
-            'Times-BoldItalic.ttf': 'https://cdn.jsdelivr.net/gh/pmo-e/web-fonts/Times%20New%20Roman/timesbi.ttf',
+            'Times-Roman.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman.ttf',
+            'Times-Bold.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman%20Bold.ttf',
+            'Times-Italic.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman%20Italic.ttf',
+            'Times-BoldItalic.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman%20Bold%20Italic.ttf',
         };
 
         const fontPromises = Object.entries(fontFiles).map(async ([fileName, url]) => {

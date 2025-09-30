@@ -59,22 +59,25 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             const editor = new Quill(editorContainerRef.current, {
                 theme: 'snow',
                 modules: {
-                    toolbar: '#toolbar-container',
+                    toolbar: {
+                        container: '#toolbar-container',
+                        handlers: {
+                            // This custom handler fixes the bug where alignment affects the whole document.
+                            'align': function(value: any) {
+                                const quill = this.quill;
+                                const range = quill.getSelection();
+                                if (range) {
+                                    const format = quill.getFormat(range);
+                                    // Toggle behavior: if the line already has this alignment, remove it.
+                                    quill.formatLine(range.index, range.length, 'align', format.align === value ? false : value);
+                                }
+                            }
+                        }
+                    },
                 },
                 formats: ['font', 'size', 'bold', 'italic', 'underline', 'align', 'list'],
             });
             
-            // Custom handler for alignment to fix the bug where it affects the whole document
-            // FIX: Cast the result of getModule('toolbar') to 'any' to access 'addHandler'.
-            (editor.getModule('toolbar') as any).addHandler('align', function(value: any) {
-                const range = editor.getSelection();
-                if (range) {
-                    // If the user has the same format, unset it. Otherwise, set it.
-                    const currentFormat = editor.getFormat(range);
-                    editor.formatLine(range.index, range.length, 'align', currentFormat.align === value ? false : value);
-                }
-            });
-
             editor.on('text-change', () => {
                 editorContentRef.current = editor.root.innerHTML;
             });
