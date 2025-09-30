@@ -6,9 +6,10 @@ import { InformationCircleIcon, MyKapLogo } from '../../components/icons';
 
 // --- Quill Font Registration ---
 // Whitelist the fonts to be used in the editor.
-// FIX: Explicitly type Font as 'any'. Quill's dynamic `import` returns a type that is
-// inferred as `unknown` in strict environments, causing type errors on the following lines.
-const Font: any = Quill.import('formats/font');
+// FIX: Cast Quill's imported 'font' format to `any` to allow dynamic property access.
+// Quill's type definitions return 'unknown' for `import`, so an explicit cast is needed
+// to add the 'whitelist' property for custom font registration.
+const Font = Quill.import('formats/font') as any;
 Font.whitelist = ['sans-serif', 'serif', 'monospace', 'times-new-roman'];
 Quill.register(Font, true);
 

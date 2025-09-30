@@ -20,6 +20,46 @@ if ((window as any).pdfMake?.vfs) {
     pdfMake.vfs = (window as any).pdfMake.vfs;
 }
 
+let timesNewRomanFontsLoaded = false;
+
+// Helper function to fetch font files and add them to pdfMake's VFS
+const loadTimesNewRomanFonts = async () => {
+    if (timesNewRomanFontsLoaded) {
+        return;
+    }
+
+    try {
+        const fontFiles = {
+            'Times-Roman.ttf': 'https://aistudiocdn.com/fonts/times-new-roman/times.ttf',
+            'Times-Bold.ttf': 'https://aistudiocdn.com/fonts/times-new-roman/timesbd.ttf',
+            'Times-Italic.ttf': 'https://aistudiocdn.com/fonts/times-new-roman/timesi.ttf',
+            'Times-BoldItalic.ttf': 'https://aistudiocdn.com/fonts/times-new-roman/timesbi.ttf',
+        };
+
+        const fontPromises = Object.entries(fontFiles).map(async ([fileName, url]) => {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch font: ${url}`);
+            }
+            const buffer = await response.arrayBuffer();
+            const base64 = btoa(new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+            return { fileName, base64 };
+        });
+
+        const loadedFonts = await Promise.all(fontPromises);
+
+        loadedFonts.forEach(({ fileName, base64 }) => {
+            pdfMake.vfs[fileName] = base64;
+        });
+
+        timesNewRomanFontsLoaded = true;
+    } catch (error) {
+        console.error("Error loading Times New Roman fonts:", error);
+        // Fallback or error handling
+        throw new Error("Could not load necessary fonts for PDF generation.");
+    }
+};
+
 
 type DocumentKey = 'promissory_note' | 'mortgage' | 'guaranty';
 
@@ -129,6 +169,9 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
         }
 
         try {
+            // Ensure fonts are loaded before generating the PDF
+            await loadTimesNewRomanFonts();
+            
             const processedHtml = processTemplate(docTemplate.content);
             const contentForPdf = htmlToPdfmake(processedHtml);
 
@@ -137,10 +180,22 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                 defaultStyle: {
                     font: 'Times'
                 },
+                fonts: {
+                    Times: {
+                        normal: 'Times-Roman.ttf',
+                        bold: 'Times-Bold.ttf',
+                        italics: 'Times-Italic.ttf',
+                        bolditalics: 'Times-BoldItalic.ttf'
+                    },
+                    Roboto: { // Keep Roboto as a fallback or for other styles if needed
+                        normal: 'Roboto-Regular.ttf',
+                        bold: 'Roboto-Medium.ttf',
+                        italics: 'Roboto-Italic.ttf',
+                        bolditalics: 'Roboto-MediumItalic.ttf'
+                    }
+                },
                  styles: {
                     'ql-align-center': {
-                        // FIX: Use 'as const' to assert the literal type for alignment, resolving the
-                        // TypeScript error where 'string' was not assignable to type 'Alignment'.
                         alignment: 'center' as const
                     },
                     'ql-align-right': {
@@ -160,7 +215,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
 
         } catch (err) {
             console.error(err);
-            showToast('Failed to generate PDF document.', 'error');
+            showToast(`Failed to generate PDF document: ${(err as Error).message}`, 'error');
         }
     };
 
