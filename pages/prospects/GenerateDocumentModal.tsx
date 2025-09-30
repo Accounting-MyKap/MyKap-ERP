@@ -29,17 +29,18 @@ const loadTimesNewRomanFonts = async () => {
     }
 
     try {
+        // Corrected font URLs from a reliable public CDN repository. This fixes the 404 errors.
         const fontFiles = {
-            'TimesNewRoman.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman.ttf',
-            'TimesNewRoman-Bold.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman-Bold.ttf',
-            'TimesNewRoman-Italic.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman-Italic.ttf',
-            'TimesNewRoman-BoldItalic.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman-BoldItalic.ttf',
+            'TimesNewRoman.ttf': 'https://cdn.jsdelivr.net/gh/Jiggmin/Kilda-True-Type-Fonts@master/Fonts/Times%20New%20Roman/times.ttf',
+            'TimesNewRoman-Bold.ttf': 'https://cdn.jsdelivr.net/gh/Jiggmin/Kilda-True-Type-Fonts@master/Fonts/Times%20New%20Roman/timesbd.ttf',
+            'TimesNewRoman-Italic.ttf': 'https://cdn.jsdelivr.net/gh/Jiggmin/Kilda-True-Type-Fonts@master/Fonts/Times%20New%20Roman/timesi.ttf',
+            'TimesNewRoman-BoldItalic.ttf': 'https://cdn.jsdelivr.net/gh/Jiggmin/Kilda-True-Type-Fonts@master/Fonts/Times%20New%20Roman/timesbi.ttf',
         };
 
         const fontPromises = Object.entries(fontFiles).map(async ([fileName, url]) => {
             const response = await fetch(url);
             if (!response.ok) {
-                throw new Error(`Failed to fetch font: ${url}`);
+                throw new Error(`Failed to fetch font: ${url} (${response.status})`);
             }
             const buffer = await response.arrayBuffer();
             const base64 = btoa(new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
@@ -181,13 +182,18 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
 
         try {
             const processedHtml = processTemplate(docTemplate.content);
-            const contentForPdf = htmlToPdfmake(processedHtml);
-
-            // This style definition provides spacing between paragraphs, lists, and other block elements,
-            // fixing the "piled up" text issue.
-            const defaultPdfStyle = {
-                paragraphMargin: [0, 0, 0, 8] as [number, number, number, number], // [left, top, right, bottom]
-            };
+            // This is the core fix for the "piled up" text. By providing default
+            // styles with margins to the html-to-pdfmake converter, we ensure that
+            // block-level elements like paragraphs (<p>) and lists (<ul>, <ol>)
+            // have vertical spacing between them in the final PDF, preserving the
+            // document's structure and readability.
+            const contentForPdf = htmlToPdfmake(processedHtml, {
+                defaultStyles: {
+                    p: { margin: [0, 0, 0, 6] }, // Add 6pt margin to the bottom of each paragraph
+                    ul: { margin: [0, 5, 0, 5] },
+                    ol: { margin: [0, 5, 0, 5] }
+                }
+            });
 
             const baseDocDefinition = {
                 content: contentForPdf,
@@ -202,7 +208,6 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                 docDefinition = {
                     ...baseDocDefinition,
                     defaultStyle: {
-                        ...defaultPdfStyle,
                         font: 'Times'
                     },
                     fonts: {
@@ -222,11 +227,8 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                     }
                 };
             } else {
-                // If custom fonts failed, use the base definition but still apply the paragraph margins.
-                docDefinition = {
-                    ...baseDocDefinition,
-                    defaultStyle: defaultPdfStyle
-                };
+                // If custom fonts failed, no specific default style is needed now that spacing is handled by the converter.
+                docDefinition = baseDocDefinition;
             }
             
             const filename = `${prospect.prospect_code}-${docTemplate.name.replace(/ /g, '-')}.pdf`;
