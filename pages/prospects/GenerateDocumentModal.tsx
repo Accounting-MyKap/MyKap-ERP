@@ -183,6 +183,12 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             const processedHtml = processTemplate(docTemplate.content);
             const contentForPdf = htmlToPdfmake(processedHtml);
 
+            // This style definition provides spacing between paragraphs, lists, and other block elements,
+            // fixing the "piled up" text issue.
+            const defaultPdfStyle = {
+                paragraphMargin: [0, 0, 0, 8] as [number, number, number, number], // [left, top, right, bottom]
+            };
+
             const baseDocDefinition = {
                 content: contentForPdf,
                 styles: {
@@ -196,6 +202,7 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                 docDefinition = {
                     ...baseDocDefinition,
                     defaultStyle: {
+                        ...defaultPdfStyle,
                         font: 'Times'
                     },
                     fonts: {
@@ -215,9 +222,11 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
                     }
                 };
             } else {
-                // If custom fonts failed, use the base definition.
-                // pdfMake will default to Roboto since it's defined in vfs_fonts.js
-                docDefinition = baseDocDefinition;
+                // If custom fonts failed, use the base definition but still apply the paragraph margins.
+                docDefinition = {
+                    ...baseDocDefinition,
+                    defaultStyle: defaultPdfStyle
+                };
             }
             
             const filename = `${prospect.prospect_code}-${docTemplate.name.replace(/ /g, '-')}.pdf`;
