@@ -56,23 +56,37 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     // Callback to initialize Quill
     const initializeQuill = useCallback(() => {
         if (editorContainerRef.current && !quillRef.current) {
+            // This is the definitive fix for the alignment and list bug.
+            // These handlers ensure formatting is applied surgically only to the selected line(s).
+            const handlers = {
+                'align': function(value: string | boolean) {
+                    const quill = this.quill;
+                    const range = quill.getSelection();
+                    if (range) {
+                        // Check the format at the beginning of the selection to decide the toggle state
+                        const currentFormats = quill.getFormat(range.index, 1);
+                        const newValue = currentFormats.align === value ? false : value;
+                        quill.formatLine(range.index, range.length, 'align', newValue, 'user');
+                    }
+                },
+                'list': function(value: string | boolean) {
+                    const quill = this.quill;
+                    const range = quill.getSelection();
+                    if (range) {
+                        // Check the format at the beginning of the selection to decide the toggle state
+                        const currentFormats = quill.getFormat(range.index, 1);
+                        const newValue = currentFormats.list === value ? false : value;
+                        quill.formatLine(range.index, range.length, 'list', newValue, 'user');
+                    }
+                }
+            };
+            
             const editor = new Quill(editorContainerRef.current, {
                 theme: 'snow',
                 modules: {
                     toolbar: {
                         container: '#toolbar-container',
-                        handlers: {
-                            // This custom handler fixes the bug where alignment affects the whole document.
-                            'align': function(value: any) {
-                                const quill = this.quill;
-                                const range = quill.getSelection();
-                                if (range) {
-                                    const format = quill.getFormat(range);
-                                    // Toggle behavior: if the line already has this alignment, remove it.
-                                    quill.formatLine(range.index, range.length, 'align', format.align === value ? false : value);
-                                }
-                            }
-                        }
+                        handlers: handlers
                     },
                 },
                 formats: ['font', 'size', 'bold', 'italic', 'underline', 'align', 'list'],

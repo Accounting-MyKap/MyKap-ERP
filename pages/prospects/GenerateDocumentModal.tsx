@@ -30,10 +30,10 @@ const loadTimesNewRomanFonts = async () => {
 
     try {
         const fontFiles = {
-            'Times-Roman.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman.ttf',
-            'Times-Bold.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman%20Bold.ttf',
-            'Times-Italic.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman%20Italic.ttf',
-            'Times-BoldItalic.ttf': 'https://cdn.jsdelivr.net/gh/zq-plus/font-collection@master/backup/Times%20New%20Roman/Times%20New%20Roman%20Bold%20Italic.ttf',
+            'TimesNewRoman.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman.ttf',
+            'TimesNewRoman-Bold.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman-Bold.ttf',
+            'TimesNewRoman-Italic.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman-Italic.ttf',
+            'TimesNewRoman-BoldItalic.ttf': 'https://cdn.jsdelivr.net/gh/fonts/times-new-roman/TimesNewRoman-BoldItalic.ttf',
         };
 
         const fontPromises = Object.entries(fontFiles).map(async ([fileName, url]) => {
@@ -168,44 +168,57 @@ const GenerateDocumentModal: React.FC<GenerateDocumentModalProps> = ({ isOpen, o
             return;
         }
 
+        let docDefinition: any;
+        let useCustomFonts = false;
+
         try {
-            // Ensure fonts are loaded before generating the PDF
             await loadTimesNewRomanFonts();
-            
+            useCustomFonts = true;
+        } catch (err) {
+            console.warn("Could not load custom 'Times New Roman' fonts. Falling back to default PDF font.", err);
+            showToast("Using default font for PDF, as custom fonts could not be loaded.", 'info');
+        }
+
+        try {
             const processedHtml = processTemplate(docTemplate.content);
             const contentForPdf = htmlToPdfmake(processedHtml);
 
-            const docDefinition = {
+            const baseDocDefinition = {
                 content: contentForPdf,
-                defaultStyle: {
-                    font: 'Times'
-                },
-                fonts: {
-                    Times: {
-                        normal: 'Times-Roman.ttf',
-                        bold: 'Times-Bold.ttf',
-                        italics: 'Times-Italic.ttf',
-                        bolditalics: 'Times-BoldItalic.ttf'
-                    },
-                    Roboto: { // Keep Roboto as a fallback or for other styles if needed
-                        normal: 'Roboto-Regular.ttf',
-                        bold: 'Roboto-Medium.ttf',
-                        italics: 'Roboto-Italic.ttf',
-                        bolditalics: 'Roboto-MediumItalic.ttf'
-                    }
-                },
-                 styles: {
-                    'ql-align-center': {
-                        alignment: 'center' as const
-                    },
-                    'ql-align-right': {
-                        alignment: 'right' as const
-                    },
-                    'ql-align-justify': {
-                        alignment: 'justify' as const
-                    }
+                styles: {
+                    'ql-align-center': { alignment: 'center' as const },
+                    'ql-align-right': { alignment: 'right' as const },
+                    'ql-align-justify': { alignment: 'justify' as const }
                 }
             };
+            
+            if (useCustomFonts) {
+                docDefinition = {
+                    ...baseDocDefinition,
+                    defaultStyle: {
+                        font: 'Times'
+                    },
+                    fonts: {
+                        Times: {
+                            normal: 'TimesNewRoman.ttf',
+                            bold: 'TimesNewRoman-Bold.ttf',
+                            italics: 'TimesNewRoman-Italic.ttf',
+                            bolditalics: 'TimesNewRoman-BoldItalic.ttf'
+                        },
+                        // Roboto is included in vfs_fonts, so it's a safe default.
+                        Roboto: {
+                            normal: 'Roboto-Regular.ttf',
+                            bold: 'Roboto-Medium.ttf',
+                            italics: 'Roboto-Italic.ttf',
+                            bolditalics: 'Roboto-MediumItalic.ttf'
+                        }
+                    }
+                };
+            } else {
+                // If custom fonts failed, use the base definition.
+                // pdfMake will default to Roboto since it's defined in vfs_fonts.js
+                docDefinition = baseDocDefinition;
+            }
             
             const filename = `${prospect.prospect_code}-${docTemplate.name.replace(/ /g, '-')}.pdf`;
             pdfMake.createPdf(docDefinition).download(filename);
