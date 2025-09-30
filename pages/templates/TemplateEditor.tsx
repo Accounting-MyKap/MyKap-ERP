@@ -146,29 +146,33 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
 
             const toolbar = quill.getModule('toolbar');
             if (toolbar) {
-                 // DEFINITIVE FIX: The handler now *only* uses the stored selection reference.
-                 // This makes it immune to the editor losing focus when the toolbar is clicked.
+                // ROBUST HANDLER FIX: The previous fix was insufficient. The issue seems to be how Quill's
+                // `formatLine` handles a collapsed selection (range.length === 0) on subsequent lines.
+                // By ensuring the length passed is at least 1, we explicitly tell Quill to format the
+                // line containing the cursor, which resolves the "format everything below" bug. This
+                // still correctly handles multi-line selections where range.length > 0.
                 (toolbar as any).addHandler('align', function(value: string | boolean) {
                     const quillInstance = (this as any).quill;
-                    const range = lastSelectionRef.current; // Use the stored range.
+                    const range = lastSelectionRef.current;
                     if (range) {
-                        quillInstance.formatLine(range.index, range.length, 'align', value);
+                        const length = range.length > 0 ? range.length : 1;
+                        quillInstance.formatLine(range.index, length, 'align', value);
                     }
                 });
                 
-                 // DEFINITIVE FIX: This handler also uses the stored selection to correctly toggle lists.
                 (toolbar as any).addHandler('list', function(value: 'bullet' | 'ordered') {
                     const quillInstance = (this as any).quill;
-                    const range = lastSelectionRef.current; // Use the stored range.
+                    const range = lastSelectionRef.current;
                     if (range) {
                         const [line, ] = quillInstance.getLine(range.index);
                         const format = line.formats();
+                        const length = range.length > 0 ? range.length : 1;
                         
-                        // Toggle behavior: if the same list format is already applied, remove it.
+                        // Toggle behavior
                         if (format.list === value) {
-                            quillInstance.formatLine(range.index, range.length, 'list', false);
+                            quillInstance.formatLine(range.index, length, 'list', false);
                         } else {
-                            quillInstance.formatLine(range.index, range.length, 'list', value);
+                            quillInstance.formatLine(range.index, length, 'list', value);
                         }
                     }
                 });
