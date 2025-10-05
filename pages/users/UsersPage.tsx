@@ -31,9 +31,10 @@ const UsersPage: React.FC = () => {
         try {
             await inviteUser(email, role);
             showToast('User invited successfully!', 'success');
-            // The modal is responsible for closing itself on success.
+            setInviteModalOpen(false); // Close modal on success
+            refetch(); // Refresh the user list
         } catch (error: unknown) {
-            // The modal is responsible for showing the error, but we can re-throw
+            // The modal is responsible for showing the error, but we re-throw
             // to ensure the promise is rejected correctly for the modal's catch block.
             throw error;
         }
@@ -43,7 +44,7 @@ const UsersPage: React.FC = () => {
         try {
             await updateUserRole(userId, newRole);
             showToast('User role updated successfully!', 'success');
-            // The modal is responsible for closing itself on success.
+            setEditingUser(null); // Close modal on success
         } catch (error: unknown) {
             throw error;
         }

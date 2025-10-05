@@ -12,15 +12,21 @@ export const useUsers = () => {
         setLoading(true);
         setError(null);
         
-        // Calls Supabase RPC 'get_all_users_with_roles' to fetch user data.
-        // This RPC must be created in your Supabase project's SQL editor.
-        const { data, error: fetchError } = await supabase.rpc('get_all_users_with_roles');
-        
+        // WORKAROUND: The RPC 'get_all_users_with_roles' is returning a 400 error.
+        // As a fallback, this queries the 'profiles' table directly.
+        // This assumes RLS is configured to allow the logged-in user (e.g., an admin)
+        // to view all profiles. This query will not include 'last_sign_in_at'
+        // as that data is in the protected 'auth.users' table.
+        const { data, error: fetchError } = await supabase
+            .from('profiles')
+            .select('id, email, first_name, last_name, role');
+
         if (fetchError) {
-            console.error('Error fetching users:', fetchError);
+            console.error('Error fetching users from profiles table:', fetchError);
             setError('Failed to load users. Please try again.');
             setUsers([]);
         } else {
+            // The data from 'profiles' maps to UserWithRole, minus optional fields.
             setUsers(data as UserWithRole[]);
         }
         
@@ -29,10 +35,7 @@ export const useUsers = () => {
 
     useEffect(() => {
         fetchUsers();
-    // The dependency array is empty because fetchUsers is stable (memoized with an empty
-    // dependency array itself), so this effect only needs to run once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [fetchUsers]);
 
     const inviteUser = async (email: string, role: UserRole) => {
         // Calls the 'invite-user' Edge Function which requires service_role privileges on the backend.
