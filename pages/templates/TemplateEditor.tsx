@@ -304,7 +304,9 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                             <button className="ql-clean" aria-label="Clear formatting"></button>
                         </span>
                     </div>
-                    <div ref={editorContainerRef} className="relative flex-grow"></div>
+                    <div className="relative flex-grow">
+                      <div ref={editorContainerRef} className="h-full"></div>
+                    </div>
                 </div>
                 
                 {/* Sidebar with Placeholders */}
