@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -14,13 +14,13 @@ interface Profile {
   role: 'admin' | 'loan_officer' | 'financial_officer' | null;
 }
 
-// Define the context shape
+// Define the context shape with improved error typing
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   signOut: () => Promise<void>;
-  updateProfile: (updatedProfile: Partial<Profile>) => Promise<{ error: any }>;
+  updateProfile: (updatedProfile: Partial<Profile>) => Promise<{ error: { message: string } | null }>;
   loading: boolean;
 }
 
@@ -43,7 +43,6 @@ const fetchProfile = async (user: User | null): Promise<Profile | null> => {
     }
     
     // Step 2: Check if the email is missing or out of sync.
-    // The user's email is the source of truth from `auth.users`.
     if (profileData && (!profileData.email || profileData.email !== user.email)) {
         console.log(`[Profile Sync] Profile for ${user.id} is missing or has a mismatched email. Syncing...`);
         
@@ -57,8 +56,8 @@ const fetchProfile = async (user: User | null): Promise<Profile | null> => {
             
         if (updateError) {
             console.error('Error syncing profile email:', updateError.message);
-            // Return the original data, even if stale, on update failure.
-            return profileData as Profile;
+            // Improvement: Return the profile with the correct email in-memory even if DB update fails.
+            return { ...profileData, email: user.email } as Profile;
         }
         
         console.log('[Profile Sync] Email sync successful.');
@@ -73,19 +72,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Ref to track the latest user ID to prevent race conditions during async operations.
+  const latestUserId = useRef<string | null>(null);
 
   useEffect(() => {
     // This function handles the initial session check.
     const initializeSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
 
-      setSession(session);
-      const currentUser = session?.user ?? null;
+      setSession(initialSession);
+      const currentUser = initialSession?.user ?? null;
+      latestUserId.current = currentUser?.id ?? null; // Initialize ref
       setUser(currentUser);
       
       if (currentUser) {
-        const profile = await fetchProfile(currentUser);
-        setProfile(profile);
+        const userProfile = await fetchProfile(currentUser);
+        // Check against the ref to ensure user hasn't changed during the async fetch.
+        if (latestUserId.current === currentUser.id) {
+          setProfile(userProfile);
+        }
       }
       
       setLoading(false);
@@ -99,11 +105,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         setSession(newSession);
         const newCurrentUser = newSession?.user ?? null;
+        latestUserId.current = newCurrentUser?.id ?? null; // Update ref immediately with the latest user ID.
         setUser(newCurrentUser);
 
         if (newCurrentUser) {
             const userProfile = await fetchProfile(newCurrentUser);
-            setProfile(userProfile);
+            // After await, check if the ref's value still matches the user we fetched for.
+            // This prevents setting a profile if the user has signed out in the meantime.
+            if (latestUserId.current === newCurrentUser.id) {
+                setProfile(userProfile);
+            } else {
+                console.log(`[Auth State Change] Profile fetch for ${newCurrentUser.id} aborted; user has changed.`);
+            }
         } else {
             setProfile(null);
         }
@@ -121,9 +134,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = useCallback(async () => {
     console.log('%c[Sign Out] Attempting to sign out...', 'color: #dc3545; font-weight: bold;');
-    setSession(null);
-    setUser(null);
-    setProfile(null);
     const { error } = await supabase.auth.signOut();
     if (error) {
         console.error('[Sign Out] Supabase signOut error:', error);
@@ -132,12 +142,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const updateProfile = useCallback(async (updatedProfile: Partial<Profile>) => {
+  const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {
     console.log('%c[Update Profile] Attempting to update profile...', 'color: #28a745; font-weight: bold;', updatedProfile);
     
     if (!user) {
         console.error('[Update Profile] Update failed: User not authenticated.');
         return { error: { message: 'User not authenticated.' } };
+    }
+    
+    // Optimization: Check if there are any actual changes before calling Supabase.
+    const hasChanges = Object.keys(updatedProfile).some(
+        key => profile?.[key as keyof Profile] !== updatedProfile[key as keyof Profile]
+    );
+
+    if (!hasChanges) {
+        console.log('[Update Profile] No changes detected, skipping update.');
+        return { error: null };
     }
     
     console.log('[Update Profile] User validated from context state:', user.id);
@@ -151,13 +171,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (error) {
         console.error('[Update Profile] Supabase update error:', error);
-    } else if (data) {
+        return { error: { message: error.message || 'An unknown update error occurred.' } };
+    }
+
+    if (data) {
         console.log('[Update Profile] Update successful. New profile data:', data);
         setProfile(data as Profile);
+        return { error: null };
     }
     
-    return { error };
-  }, [user]);
+    // This case should not happen if the Supabase client works as expected, but it's good practice to handle.
+    console.warn('[Update Profile] Supabase returned no data and no error.');
+    return { error: { message: 'Update operation returned no data.' } };
+
+  }, [user, profile]); // Added profile to dependencies for the change check.
 
   const value = {
     session,

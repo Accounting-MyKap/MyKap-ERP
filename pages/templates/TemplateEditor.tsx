@@ -4,11 +4,11 @@ import Quill from 'quill';
 import { Template } from '../../contexts/TemplatesContext';
 import { useToast } from '../../hooks/useToast';
 
-// Quill's font registration
-// FIX: Cast Quill.import result to 'any' to access properties like 'whitelist'.
-const Font = Quill.import('formats/font') as any;
+// FIX: The type for the imported Font class is not properly exposed by `@types/quill`,
+// resulting in 'unknown'. Casting to `any` allows us to modify the static `whitelist`
+// property and re-register the format correctly.
+const Font: any = Quill.import('formats/font');
 Font.whitelist = ['sans-serif', 'times-new-roman'];
-// FIX: The above cast also resolves the type error for Quill.register.
 Quill.register(Font, true);
 
 interface TemplateEditorProps {
@@ -32,51 +32,61 @@ const PlaceholderButton: React.FC<{ onInsert: () => void, children: React.ReactN
 );
 
 const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => {
-    const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving'>('saved');
     const { showToast } = useToast();
 
     const quillRef = useRef<Quill | null>(null);
     const editorContainerRef = useRef<HTMLDivElement>(null);
-    const editorContentRef = useRef<string>(template?.content || '');
+    const originalContentRef = useRef<string>('');
+    
+    // This ref helps prevent the initial 'text-change' event from firing on content load
+    const isContentLoadedRef = useRef(false);
 
-    const handleSave = async () => {
-        if (!template || !quillRef.current) return;
-        setIsSaving(true);
+    // --- Save Logic (with race condition fix and memoization) ---
+    const handleSave = useCallback(async () => {
+        if (!template || !quillRef.current || template.isReadOnly) return;
+        
+        // Capture ID and content at the moment of saving
+        const templateIdToSave = template.id;
+        const contentToSave = quillRef.current.root.innerHTML;
+        
+        setSaveStatus('saving');
         try {
-            const content = quillRef.current.root.innerHTML;
-            await onSave(template.id, content);
-            showToast('Template saved successfully!', 'success');
+            await onSave(templateIdToSave, contentToSave);
+            
+            // Only show success and reset status if the user is still on the same template
+            if (quillRef.current && template && template.id === templateIdToSave) {
+                 showToast('Template saved successfully!', 'success');
+                 originalContentRef.current = contentToSave; // Update original content on successful save
+                 setSaveStatus('saved');
+            }
         } catch (error: any) {
             showToast(`Error saving template: ${error.message}`, 'error');
-        } finally {
-            setIsSaving(false);
+            // If saving fails, changes are still unsaved
+            setSaveStatus('unsaved');
         }
-    };
+    }, [template, onSave, showToast]);
 
-    // Callback to initialize Quill
-    const initializeQuill = useCallback(() => {
+    // --- Quill Initialization (runs only once on component mount) ---
+    useEffect(() => {
         if (editorContainerRef.current && !quillRef.current) {
-            // This is the definitive fix for the alignment and list bug.
-            // These handlers ensure formatting is applied surgically only to the selected line(s).
-            const handlers = {
+             const handlers = {
                 'align': function(value: string | boolean) {
-                    const quill = this.quill;
+                    const quill = (this as any).quill;
                     const range = quill.getSelection();
                     if (range) {
-                        // Check the format at the beginning of the selection to decide the toggle state
                         const currentFormats = quill.getFormat(range.index, 1);
                         const newValue = currentFormats.align === value ? false : value;
-                        quill.formatLine(range.index, range.length, 'align', newValue, 'user');
+                        quill.formatLine(range.index, range.length, 'align', newValue, Quill.sources.USER);
                     }
                 },
                 'list': function(value: string | boolean) {
-                    const quill = this.quill;
+                    const quill = (this as any).quill;
                     const range = quill.getSelection();
                     if (range) {
-                        // Check the format at the beginning of the selection to decide the toggle state
                         const currentFormats = quill.getFormat(range.index, 1);
                         const newValue = currentFormats.list === value ? false : value;
-                        quill.formatLine(range.index, range.length, 'list', newValue, 'user');
+                        quill.formatLine(range.index, range.length, 'list', newValue, Quill.sources.USER);
                     }
                 }
             };
@@ -92,32 +102,96 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 formats: ['font', 'size', 'bold', 'italic', 'underline', 'align', 'list'],
             });
             
-            editor.on('text-change', () => {
-                editorContentRef.current = editor.root.innerHTML;
-            });
-            
             quillRef.current = editor;
-        }
 
-        if (quillRef.current && template) {
-            if (quillRef.current.root.innerHTML !== template.content) {
-                quillRef.current.root.innerHTML = template.content;
+            // Setup a single text-change listener that uses a ref for original content
+            const textChangeHandler = (delta: any, oldDelta: any, source: string) => {
+                if (source === Quill.sources.USER && isContentLoadedRef.current) {
+                    const currentContent = quillRef.current?.root.innerHTML || '';
+                    setSaveStatus(currentContent !== originalContentRef.current ? 'unsaved' : 'saved');
+                }
+            };
+            
+            editor.on('text-change', textChangeHandler);
+            
+            // Improved cleanup on component unmount
+            return () => {
+                if (quillRef.current) {
+                    quillRef.current.off('text-change', textChangeHandler);
+                     // Forcing the cleanup of the container is a robust way to prevent memory leaks
+                    if (editorContainerRef.current) {
+                        editorContainerRef.current.innerHTML = '';
+                    }
+                    quillRef.current = null;
+                }
+            };
+        }
+    }, []); // Empty dependency array ensures this runs only once
+
+    // --- Content and State Management (runs when selected template changes) ---
+    useEffect(() => {
+        const quill = quillRef.current;
+        if (quill) {
+            isContentLoadedRef.current = false; // Prevent text-change event during programmatic content load
+
+            if (template) {
+                originalContentRef.current = template.content; // Store the original content
+                if (quill.root.innerHTML !== template.content) {
+                    quill.root.innerHTML = template.content;
+                }
+                quill.enable(!template.isReadOnly);
+            } else {
+                originalContentRef.current = '';
+                quill.root.innerHTML = '';
+                quill.enable(false);
             }
-        } else if (quillRef.current) {
-             quillRef.current.root.innerHTML = '';
-        }
 
+            setSaveStatus('saved');
+            
+            // Using double requestAnimationFrame is the most robust way to ensure this runs
+            // after the DOM has been painted and Quill's internal events have settled.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    isContentLoadedRef.current = true;
+                });
+            });
+        }
     }, [template]);
 
+    // --- Data Loss Prevention on Tab/Browser Close ---
     useEffect(() => {
-        initializeQuill();
-    }, [initializeQuill]);
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (saveStatus === 'unsaved') {
+                event.preventDefault();
+                event.returnValue = ''; // Required for cross-browser compatibility
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [saveStatus]);
+
+    // --- Keyboard Shortcut for Saving (Ctrl+S / Cmd+S) ---
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (saveStatus === 'unsaved' && template && !template.isReadOnly) {
+                    handleSave();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [saveStatus, template, handleSave]);
     
     // Function to insert text into the editor
     const insertPlaceholder = (text: string) => {
         if (!quillRef.current) return;
         const range = quillRef.current.getSelection(true);
-        quillRef.current.insertText(range.index, text, 'user');
+        quillRef.current.insertText(range.index, text, Quill.sources.USER);
         quillRef.current.setSelection(range.index + text.length, 0);
         quillRef.current.focus();
     }
@@ -126,7 +200,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
         if (!quillRef.current) return;
         const range = quillRef.current.getSelection(true);
         const textToInsert = `${startTag}\n\n${endTag}`;
-        quillRef.current.insertText(range.index, textToInsert, 'user');
+        quillRef.current.insertText(range.index, textToInsert, Quill.sources.USER);
         // Place cursor in the middle
         quillRef.current.setSelection(range.index + startTag.length + 1, 0);
         quillRef.current.focus();
@@ -155,6 +229,18 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             </div>
         );
     }
+    
+    const renderSaveStatus = () => {
+        switch (saveStatus) {
+            case 'saving': return <span className="text-sm text-gray-500 italic">Saving...</span>;
+            case 'unsaved': return <span className="text-sm text-yellow-600 font-semibold">Unsaved changes</span>;
+            case 'saved': return <span className="text-sm text-green-600">All changes saved</span>;
+            default: return null;
+        }
+    };
+
+    // Clearer logic for enabling/disabling the save button
+    const canSave = saveStatus === 'unsaved' && !template.isReadOnly;
 
     return (
         <div className="h-full flex flex-col bg-white">
@@ -166,14 +252,21 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                         Last updated: {new Date(template.updated_at).toLocaleString()}
                     </p>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving || template.isReadOnly}
-                    className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-                    title={template.isReadOnly ? "This is a default template and cannot be edited." : "Save changes"}
-                >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
+                <div className="flex items-center space-x-4">
+                    {renderSaveStatus()}
+                    <button
+                        onClick={handleSave}
+                        disabled={!canSave}
+                        className={`font-medium py-2 px-4 rounded-md transition-colors ${
+                            canSave 
+                                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={template.isReadOnly ? "This is a default template and cannot be edited." : "Save changes (Ctrl+S)"}
+                    >
+                        {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
             </div>
             
             <div className="flex-grow flex min-h-0">
@@ -181,11 +274,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 <div className="flex-grow flex flex-col h-full">
                     <div id="toolbar-container" className="border-b">
                          <span className="ql-formats">
-                            <select className="ql-font" defaultValue="sans-serif">
+                            <select className="ql-font" defaultValue="sans-serif" aria-label="Font">
                                 <option value="sans-serif">Sans Serif</option>
                                 <option value="times-new-roman">Times Roman</option>
                             </select>
-                            <select className="ql-size">
+                            <select className="ql-size" aria-label="Font size">
                                 <option value="small"></option>
                                 <option selected></option>
                                 <option value="large"></option>
@@ -193,22 +286,22 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                             </select>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-bold"></button>
-                            <button className="ql-italic"></button>
-                            <button className="ql-underline"></button>
+                            <button className="ql-bold" aria-label="Bold"></button>
+                            <button className="ql-italic" aria-label="Italic"></button>
+                            <button className="ql-underline" aria-label="Underline"></button>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-align" value=""></button>
-                            <button className="ql-align" value="center"></button>
-                            <button className="ql-align" value="right"></button>
-                            <button className="ql-align" value="justify"></button>
+                            <button className="ql-align" value="" aria-label="Align left"></button>
+                            <button className="ql-align" value="center" aria-label="Align center"></button>
+                            <button className="ql-align" value="right" aria-label="Align right"></button>
+                            <button className="ql-align" value="justify" aria-label="Justify"></button>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-list" value="ordered"></button>
-                            <button className="ql-list" value="bullet"></button>
+                            <button className="ql-list" value="ordered" aria-label="Ordered list"></button>
+                            <button className="ql-list" value="bullet" aria-label="Bulleted list"></button>
                         </span>
                          <span className="ql-formats">
-                            <button className="ql-clean"></button>
+                            <button className="ql-clean" aria-label="Clear formatting"></button>
                         </span>
                     </div>
                     <div ref={editorContainerRef} className="flex-grow h-full overflow-y-auto"></div>

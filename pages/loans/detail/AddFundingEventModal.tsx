@@ -35,7 +35,9 @@ const AddFundingEventModal: React.FC<AddFundingEventModalProps> = ({ isOpen, onC
     };
 
     const totalDistributed = useMemo(() => {
-        return Object.values(distributions).reduce((sum, amount) => sum + (amount || 0), 0);
+        // FIX: Explicitly type the accumulator and cast the value to Number to resolve
+        // a TypeScript error where the '+' operator was considered ambiguous on 'unknown' types.
+        return Object.values(distributions).reduce<number>((sum, amount) => sum + (Number(amount) || 0), 0);
     }, [distributions]);
     
     const remainingAmount = useMemo(() => {
