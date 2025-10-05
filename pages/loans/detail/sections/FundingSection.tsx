@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Prospect, Funder } from '../../../prospects/types';
-import { useLenders } from '../../../lenders/useLenders';
+import { useLenders } from '../../../../hooks/useLenders';
 import AddLoanFunderModal from '../AddLoanFunderModal';
 import AddFundingEventModal from '../AddFundingEventModal';
 import EditFunderModal from '../EditFunderModal';

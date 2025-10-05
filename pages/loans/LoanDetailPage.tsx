@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import { useProspects } from '../prospects/useProspects';
-import { useLenders } from '../lenders/useLenders';
+import { useLenders } from '../../hooks/useLenders';
 import { Prospect } from '../prospects/types';
 import LoanDetailSidebar, { Section, SubSection } from './detail/LoanDetailSidebar';
 import LoanDetailHeader from './detail/LoanDetailHeader';

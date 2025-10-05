@@ -301,7 +301,6 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 </div>
             </div>
             
-            {/* ✅ MEJORA: Estructura más clara del layout */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Editor Area */}
                 <div className="flex-1 flex flex-col overflow-hidden">
@@ -339,8 +338,8 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                         </span>
                     </div>
                     
-                    {/* ✅ MEJORA CRÍTICA: Contenedor con altura definida */}
-                    <div className="flex-1 overflow-auto">
+                    {/* CRITICAL LAYOUT FIX: The outer div grows, establishing a height. The inner div then fills that height. */}
+                    <div className="flex-grow">
                         <div 
                             ref={editorContainerRef} 
                             className="h-full"

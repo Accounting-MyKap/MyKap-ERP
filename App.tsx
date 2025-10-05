@@ -17,6 +17,8 @@ import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ui/ToastContainer';
 import { TemplatesProvider } from './contexts/TemplatesContext';
 import TemplatesPage from './pages/templates/TemplatesPage';
+import { LendersProvider } from './contexts/LendersContext';
+import { UsersProvider } from './contexts/UsersContext';
 
 // A layout component to provide context to authenticated routes.
 // It does not consume auth context itself, so it won't re-render on auth state changes.
@@ -24,7 +26,11 @@ const ProtectedLayout: React.FC = () => {
   return (
     <ProspectsProvider>
       <TemplatesProvider>
-        <Outlet />
+        <LendersProvider>
+          <UsersProvider>
+            <Outlet />
+          </UsersProvider>
+        </LendersProvider>
       </TemplatesProvider>
     </ProspectsProvider>
   );

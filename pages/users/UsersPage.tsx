@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Header from '../../components/Header';
-import { useUsers } from './useUsers';
+import { useUsers } from '../../hooks/useUsers';
 import { useToast } from '../../hooks/useToast';
 import { AddIcon, EditIcon } from '../../components/icons';
 import InviteUserModal from './InviteUserModal';
