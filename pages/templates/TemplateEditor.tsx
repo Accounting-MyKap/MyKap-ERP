@@ -271,7 +271,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             
             <div className="flex-grow flex min-h-0">
                 {/* Editor Area */}
-                <div className="flex-grow flex flex-col h-full">
+                <div className="flex-grow flex flex-col min-w-0">
                     <div id="toolbar-container" className="border-b">
                          <span className="ql-formats">
                             <select className="ql-font" defaultValue="sans-serif" aria-label="Font">
@@ -304,7 +304,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                             <button className="ql-clean" aria-label="Clear formatting"></button>
                         </span>
                     </div>
-                    <div ref={editorContainerRef} className="flex-grow h-full overflow-y-auto"></div>
+                    <div ref={editorContainerRef} className="relative flex-grow"></div>
                 </div>
                 
                 {/* Sidebar with Placeholders */}
