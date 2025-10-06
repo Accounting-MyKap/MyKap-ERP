@@ -338,13 +338,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                         </span>
                     </div>
                     
-                    {/* CRITICAL LAYOUT FIX: The outer div grows, establishing a height. The inner div then fills that height. */}
-                    <div className="flex-grow">
-                        <div 
-                            ref={editorContainerRef} 
-                            className="h-full"
-                        />
-                    </div>
+                    {/* The editor container itself will grow to fill the available space. */}
+                    <div 
+                        ref={editorContainerRef} 
+                        className="flex-1 overflow-hidden"
+                    />
                 </div>
                 
                 {/* Sidebar with Placeholders */}
