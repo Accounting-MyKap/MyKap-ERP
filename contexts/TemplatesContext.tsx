@@ -16,7 +16,7 @@ interface TemplatesContextType {
     loading: boolean;
     error: string | null;
     updateTemplate: (template: Template, newContent: string) => Promise<void>;
-    createTemplate: (name: string, key: string) => Promise<Template | null>;
+    createTemplate: (name: string, key: string) => Promise<Template>;
 }
 
 export const TemplatesContext = createContext<TemplatesContextType | undefined>(undefined);
@@ -26,12 +26,16 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const seedingRef = useRef(false);
+    const isMountedRef = useRef(true);
 
     const fetchTemplates = useCallback(async () => {
         if (seedingRef.current) return;
 
-        setLoading(true);
-        setError(null);
+        if (isMountedRef.current) {
+            setLoading(true);
+            setError(null);
+        }
+        
         let finalTemplates: Template[] = [];
         let errorMessage: string | null = null;
 
@@ -69,13 +73,13 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
                             .upsert(templatesToSeed, { onConflict: 'key' })
                             .select();
 
-                        if (seedError) {
-                            if (import.meta.env.DEV) console.error("❌ Seeding failed:", seedError);
-                            errorMessage = "Could not initialize templates. Using read-only mode.";
+                        if (seedError || !seededData || seededData.length === 0) {
+                            if (import.meta.env.DEV) console.error("❌ Seeding failed or returned no data. Falling back to read-only templates.", { seedError });
+                            errorMessage = "Could not initialize templates from the database. Using read-only mode.";
                             finalTemplates = getReadOnlyDefaultTemplates();
                         } else {
-                            if (import.meta.env.DEV) console.log("✅ Templates seeded successfully");
-                            finalTemplates = ((seededData as Template[]) || []).sort((a, b) => a.name.localeCompare(b.name));
+                            if (import.meta.env.DEV) console.log("✅ Templates seeded successfully from database");
+                            finalTemplates = (seededData as Template[]).sort((a, b) => a.name.localeCompare(b.name));
                         }
                     } finally {
                         seedingRef.current = false;
@@ -92,56 +96,60 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
             finalTemplates = getReadOnlyDefaultTemplates();
         }
 
-        setTemplates(finalTemplates);
-        setError(errorMessage);
-        setLoading(false);
+        if (isMountedRef.current) {
+            setTemplates(finalTemplates);
+            setError(errorMessage);
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => {
+        isMountedRef.current = true;
         fetchTemplates();
-        // Cleanup ref on component unmount
+        
         return () => {
+            isMountedRef.current = false;
             seedingRef.current = false;
         };
     }, [fetchTemplates]);
 
     const updateTemplate = async (template: Template, newContent: string) => {
-        if (template.isReadOnly) {
+        if (template.isReadOnly || template.id.startsWith('default-')) {
             throw new Error("Cannot modify read-only default templates.");
+        }
+        
+        if (newContent.length > 1_000_000) {
+            throw new Error("Content exceeds maximum size (1MB)");
         }
 
         const originalTemplates = templates;
         const newUpdatedAt = new Date().toISOString();
         const updatedTemplate = { ...template, content: newContent, updated_at: newUpdatedAt };
 
-        // 1. Optimistic UI Update
         setTemplates(prev => prev.map(t => t.id === template.id ? updatedTemplate : t));
 
         try {
-            // 2. DB Update with concurrency check
-            const { error, count } = await supabase
+            const { data, error } = await supabase
                 .from('document_templates')
                 .update({ content: newContent, updated_at: newUpdatedAt })
                 .eq('id', template.id)
-                .eq('updated_at', template.updated_at); 
+                .eq('updated_at', template.updated_at)
+                .select(); 
 
             if (error) throw error;
             
-            if (count === 0) {
-                // This means the row was either updated by someone else or deleted.
-                await fetchTemplates(); // Get the latest state from the DB.
-                throw new Error("This template was modified or deleted by another user. The editor has been refreshed.");
+            if (!data || data.length === 0) {
+                await fetchTemplates();
+                // Softer concurrency message
+                throw new Error("This template was updated by another user. The page has been refreshed with the latest version.");
             }
-            // Success: Optimistic update is confirmed.
-
         } catch (err) {
-            // 3. Revert UI on any error and re-throw
             setTemplates(originalTemplates);
             throw err;
         }
     };
     
-    const createTemplate = async (name: string, key: string): Promise<Template | null> => {
+    const createTemplate = async (name: string, key: string): Promise<Template> => {
         const trimmedName = name.trim();
         const trimmedKey = key.trim();
 
@@ -158,6 +166,11 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
         const keyRegex = /^[a-z0-9_]+$/;
         if (!keyRegex.test(trimmedKey)) {
             throw new Error("Template key can only contain lowercase letters, numbers, and underscores.");
+        }
+        
+        // Client-side validation for faster feedback
+        if (templates.some(t => t.key === trimmedKey)) {
+            throw new Error(`A template with the key '${trimmedKey}' already exists.`);
         }
 
         const newTemplateData = {
@@ -179,14 +192,14 @@ export const TemplatesProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
             throw error;
         }
-
-        if (data) {
-            const createdTemplate = data as Template;
-            setTemplates(prev => [createdTemplate, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
-            return createdTemplate;
-        }
         
-        return null;
+        if (!data) {
+            throw new Error("Failed to create template: No data was returned from the server.");
+        }
+
+        const createdTemplate = data as Template;
+        setTemplates(prev => [createdTemplate, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+        return createdTemplate;
     };
 
     const value = { templates, loading, error, updateTemplate, createTemplate };
