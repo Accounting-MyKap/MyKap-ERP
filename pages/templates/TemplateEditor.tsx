@@ -3,12 +3,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Quill from 'quill';
 import { Template } from '../../contexts/TemplatesContext';
 import { useToast } from '../../hooks/useToast';
+import { UndoIcon, RedoIcon } from '../../components/icons';
 
-// FIX: The type for the imported Font class is not properly exposed by `@types/quill`,
-// resulting in 'unknown'. Casting to `any` allows us to modify the static `whitelist`
-// property and re-register the format correctly.
+// Add more fonts to the whitelist
 const Font: any = Quill.import('formats/font');
-Font.whitelist = ['sans-serif', 'times-new-roman'];
+Font.whitelist = ['sans-serif', 'times-new-roman', 'courier-new', 'georgia'];
 Quill.register(Font, true);
 
 interface TemplateEditorProps {
@@ -36,20 +35,17 @@ const PlaceholderButton: React.FC<{ onInsert: () => void, children: React.ReactN
 
 const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => {
     const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving'>('saved');
+    const [wordCount, setWordCount] = useState(0);
     const { showToast } = useToast();
 
     const quillRef = useRef<Quill | null>(null);
     const editorContainerRef = useRef<HTMLDivElement>(null);
     const originalContentRef = useRef<string>('');
-    
-    // This ref helps prevent the initial 'text-change' event from firing on content load
     const isContentLoadedRef = useRef(false);
 
-    // --- Save Logic (with race condition fix and memoization) ---
     const handleSave = useCallback(async () => {
         if (!template || !quillRef.current || template.isReadOnly) return;
         
-        // Capture template object and content at the moment of saving
         const templateToSave = template;
         const contentToSave = quillRef.current.root.innerHTML;
         
@@ -57,81 +53,66 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
         try {
             await onSave(templateToSave, contentToSave);
             
-            // Only show success and reset status if the user is still on the same template
             if (quillRef.current && template && template.id === templateToSave.id) {
                 showToast('Template saved successfully!', 'success');
                 originalContentRef.current = contentToSave;
                 setSaveStatus('saved');
             }
         } catch (error: unknown) {
-            const message = error instanceof Error 
-                ? error.message 
-                : 'An unexpected error occurred while saving';
-            showToast(`Error saving template: ${message}`, 'error');
+            const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+            showToast(`Error saving: ${message}`, 'error');
             setSaveStatus('unsaved');
         }
     }, [template, onSave, showToast]);
 
-    // --- Quill Initialization (runs only once on component mount) ---
     useEffect(() => {
         if (editorContainerRef.current && !quillRef.current) {
-            const handlers = {
-                'align': function(value: string | boolean) {
-                    const quill = (this as any).quill;
-                    const range = quill.getSelection();
-                    if (range) {
-                        const currentFormats = quill.getFormat(range.index, 1);
-                        const newValue = currentFormats.align === value ? false : value;
-                        quill.formatLine(range.index, range.length, 'align', newValue, Quill.sources.USER);
-                    }
-                },
-                'list': function(value: string | boolean) {
-                    const quill = (this as any).quill;
-                    const range = quill.getSelection();
-                    if (range) {
-                        const currentFormats = quill.getFormat(range.index, 1);
-                        const newValue = currentFormats.list === value ? false : value;
-                        quill.formatLine(range.index, range.length, 'list', newValue, Quill.sources.USER);
-                    }
-                }
-            };
-            
             const editor = new Quill(editorContainerRef.current, {
                 theme: 'snow',
                 modules: {
                     toolbar: {
                         container: '#toolbar-container',
-                        handlers: handlers
+                        handlers: {
+                            'undo': () => quillRef.current?.history.undo(),
+                            'redo': () => quillRef.current?.history.redo(),
+                        }
+                    },
+                    history: {
+                        delay: 500,
+                        maxStack: 100,
+                        userOnly: true,
                     },
                 },
-                formats: ['font', 'size', 'bold', 'italic', 'underline', 'align', 'list'],
+                formats: [
+                    'font', 'size', 'bold', 'italic', 'underline', 'strike', 
+                    'color', 'background', 'list', 'blockquote', 'align'
+                ],
             });
             
             quillRef.current = editor;
 
-            // Setup a single text-change listener
             const textChangeHandler = (delta: any, oldDelta: any, source: string) => {
-                if (source === Quill.sources.USER && isContentLoadedRef.current) {
-                    const currentContent = quillRef.current?.root.innerHTML || '';
-                    setSaveStatus(currentContent !== originalContentRef.current ? 'unsaved' : 'saved');
+                if (quillRef.current) {
+                    if (source === Quill.sources.USER && isContentLoadedRef.current) {
+                        const currentContent = quillRef.current.root.innerHTML;
+                        setSaveStatus(currentContent !== originalContentRef.current ? 'unsaved' : 'saved');
+                    }
+                    const text = quillRef.current.getText();
+                    const count = text.trim() ? text.trim().split(/\s+/).length : 0;
+                    setWordCount(count);
                 }
             };
             
             editor.on('text-change', textChangeHandler);
             
             return () => {
-                if (quillRef.current) {
-                    quillRef.current.off('text-change', textChangeHandler);
-                    if (editorContainerRef.current) {
-                        editorContainerRef.current.innerHTML = '';
-                    }
-                    quillRef.current = null;
-                }
+                quillRef.current?.off('text-change', textChangeHandler);
+                editorContainerRef.current && (editorContainerRef.current.innerHTML = '');
+                quillRef.current = null;
             };
         }
     }, []);
 
-    // --- Content and State Management (runs when selected template changes) ---
     useEffect(() => {
         const quill = quillRef.current;
         if (quill) {
@@ -142,24 +123,23 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 if (quill.root.innerHTML !== template.content) {
                     quill.root.innerHTML = template.content;
                 }
+                const text = quill.getText();
+                setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
                 quill.enable(!template.isReadOnly);
             } else {
                 originalContentRef.current = '';
                 quill.root.innerHTML = '';
+                setWordCount(0);
                 quill.enable(false);
             }
 
             setSaveStatus('saved');
+            quill.history.clear();
             
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    isContentLoadedRef.current = true;
-                });
-            });
+            requestAnimationFrame(() => { isContentLoadedRef.current = true; });
         }
     }, [template]);
 
-    // --- Data Loss Prevention on Tab/Browser Close ---
     useEffect(() => {
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
             if (saveStatus === 'unsaved') {
@@ -167,14 +147,10 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 event.returnValue = '';
             }
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [saveStatus]);
 
-    // --- Keyboard Shortcut for Saving (Ctrl+S / Cmd+S) ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -188,7 +164,6 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [saveStatus, template, handleSave]);
     
-    // Function to insert text into the editor
     const insertPlaceholder = (text: string) => {
         if (!quillRef.current) return;
         const range = quillRef.current.getSelection(true);
@@ -237,36 +212,10 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     
     const renderSaveStatus = () => {
         switch (saveStatus) {
-            case 'saving': 
-                return (
-                    <span className="text-sm text-gray-500 italic flex items-center">
-                        <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Saving...
-                    </span>
-                );
-            case 'unsaved': 
-                return (
-                    <span className="text-sm text-yellow-600 font-semibold flex items-center">
-                        <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        Unsaved changes
-                    </span>
-                );
-            case 'saved': 
-                return (
-                    <span className="text-sm text-green-600 flex items-center">
-                        <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        All changes saved
-                    </span>
-                );
-            default: 
-                return null;
+            case 'saving': return <span className="text-sm text-gray-500 italic flex items-center"><svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>Saving...</span>;
+            case 'unsaved': return <span className="text-sm text-yellow-600 font-semibold flex items-center"><svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>Unsaved changes</span>;
+            case 'saved': return <span className="text-sm text-green-600 flex items-center"><svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>All changes saved</span>;
+            default: return null;
         }
     };
 
@@ -278,22 +227,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             <div className="p-4 border-b flex justify-between items-center flex-shrink-0 bg-white">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900">{template.name}</h3>
-                    <p className="text-sm text-gray-500">
-                        Last updated: {new Date(template.updated_at).toLocaleString()}
-                    </p>
+                    <p className="text-sm text-gray-500">Last updated: {new Date(template.updated_at).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center space-x-4">
                     {renderSaveStatus()}
-                    <button
-                        onClick={handleSave}
-                        disabled={!canSave}
-                        className={`font-medium py-2 px-4 rounded-md transition-colors ${
-                            canSave 
-                                ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                        title={template.isReadOnly ? "This is a default template and cannot be edited." : "Save changes (Ctrl+S)"}
-                    >
+                    <button onClick={handleSave} disabled={!canSave} className={`font-medium py-2 px-4 rounded-md transition-colors ${canSave ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`} title={template.isReadOnly ? "This is a default template and cannot be edited." : "Save changes (Ctrl+S)"}>
                         {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
                     </button>
                 </div>
@@ -303,44 +241,53 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                 {/* Editor Area */}
                 <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Toolbar */}
-                    <div id="toolbar-container" className="border-b bg-gray-50">
+                    <div id="toolbar-container" className="border-b bg-gray-50 p-1">
                         <span className="ql-formats">
-                            <select className="ql-font" defaultValue="sans-serif" aria-label="Font">
+                            <button className="ql-undo" title="Undo (Ctrl+Z)"><UndoIcon className="w-5 h-5"/></button>
+                            <button className="ql-redo" title="Redo (Ctrl+Y)"><RedoIcon className="w-5 h-5"/></button>
+                        </span>
+                        <span className="ql-formats">
+                            <select className="ql-font" defaultValue="sans-serif">
                                 <option value="sans-serif">Sans Serif</option>
                                 <option value="times-new-roman">Times Roman</option>
+                                <option value="courier-new">Courier New</option>
+                                <option value="georgia">Georgia</option>
                             </select>
-                            <select className="ql-size" aria-label="Font size">
+                            <select className="ql-size">
                                 <option value="small"></option>
-                                <option defaultValue=""></option>
+                                <option selected></option>
                                 <option value="large"></option>
                                 <option value="huge"></option>
                             </select>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-bold" aria-label="Bold"></button>
-                            <button className="ql-italic" aria-label="Italic"></button>
-                            <button className="ql-underline" aria-label="Underline"></button>
+                            <button className="ql-bold"></button>
+                            <button className="ql-italic"></button>
+                            <button className="ql-underline"></button>
+                            <button className="ql-strike"></button>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-align" value="" aria-label="Align left"></button>
-                            <button className="ql-align" value="center" aria-label="Align center"></button>
-                            <button className="ql-align" value="right" aria-label="Align right"></button>
-                            <button className="ql-align" value="justify" aria-label="Justify"></button>
+                            <select className="ql-color"></select>
+                            <select className="ql-background"></select>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-list" value="ordered" aria-label="Ordered list"></button>
-                            <button className="ql-list" value="bullet" aria-label="Bulleted list"></button>
+                            <button className="ql-list" value="ordered"></button>
+                            <button className="ql-list" value="bullet"></button>
+                            <button className="ql-blockquote"></button>
                         </span>
                         <span className="ql-formats">
-                            <button className="ql-clean" aria-label="Clear formatting"></button>
+                            <select className="ql-align"></select>
+                        </span>
+                        <span className="ql-formats">
+                            <button className="ql-clean"></button>
                         </span>
                     </div>
                     
-                    {/* The editor container itself will grow to fill the available space. */}
-                    <div 
-                        ref={editorContainerRef} 
-                        className="flex-1 overflow-hidden"
-                    />
+                    <div ref={editorContainerRef} className="flex-1 overflow-y-auto" />
+
+                    <div className="flex-shrink-0 border-t p-2 text-right text-sm text-gray-500 bg-gray-50">
+                        Word Count: {wordCount}
+                    </div>
                 </div>
                 
                 {/* Sidebar with Placeholders */}
@@ -348,42 +295,22 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                     <h3 className="text-base font-bold text-gray-800">Assets & Logic Blocks</h3>
                     
                     <PlaceholderSection title="Assets">
-                        <PlaceholderButton onInsert={() => insertPlaceholder('{{COMPANY_LOGO}}')}>
-                            Insert Logo
-                        </PlaceholderButton>
+                        <PlaceholderButton onInsert={() => insertPlaceholder('{{COMPANY_LOGO}}')}>Insert Logo</PlaceholderButton>
                     </PlaceholderSection>
 
                     <PlaceholderSection title="Conditional Blocks">
                         <p className="text-xs text-gray-600">Show content only if co-borrowers exist.</p>
-                        <PlaceholderButton onInsert={() => insertBlock('{{#if co_borrowers}}', '{{/if}}')}>
-                            Insert Co-Borrower Block
-                        </PlaceholderButton>
+                        <PlaceholderButton onInsert={() => insertBlock('{{#if co_borrowers}}', '{{/if}}')}>Insert Co-Borrower Block</PlaceholderButton>
                     </PlaceholderSection>
                     
                     <PlaceholderSection title="Looping Blocks">
                         <p className="text-xs text-gray-600">Repeat content for each co-borrower.</p>
-                        <PlaceholderButton onInsert={() => insertBlock('{{#each co_borrowers}}', '{{/each}}')}>
-                            Insert Co-Borrower Loop
-                        </PlaceholderButton>
+                        <PlaceholderButton onInsert={() => insertBlock('{{#each co_borrowers}}', '{{/each}}')}>Insert Co-Borrower Loop</PlaceholderButton>
                         <div className="text-xs text-gray-600 mt-2">
                             <p>Available fields inside loop:</p>
                             <div className="pl-2 mt-1 space-y-1">
-                                <div>
-                                    <code className="bg-gray-200 p-1 rounded font-mono text-gray-800">
-                                        {'{{this.full_name}}'}
-                                    </code>
-                                    <p className="text-gray-500 text-[10px] mt-0.5">
-                                        The full name of the co-borrower.
-                                    </p>
-                                </div>
-                                <div>
-                                    <code className="bg-gray-200 p-1 rounded font-mono text-gray-800">
-                                        {'{{this.relation_type}}'}
-                                    </code>
-                                    <p className="text-gray-500 text-[10px] mt-0.5">
-                                        Their relation to the loan (e.g., Co-Borrower, Guarantor).
-                                    </p>
-                                </div>
+                                <div><code className="bg-gray-200 p-1 rounded font-mono text-gray-800">{'{{this.full_name}}'}</code><p className="text-gray-500 text-[10px] mt-0.5">The full name of the co-borrower.</p></div>
+                                <div><code className="bg-gray-200 p-1 rounded font-mono text-gray-800">{'{{this.relation_type}}'}</code><p className="text-gray-500 text-[10px] mt-0.5">Their relation to the loan (e.g., Co-Borrower, Guarantor).</p></div>
                             </div>
                         </div>
                     </PlaceholderSection>
@@ -391,12 +318,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                     <PlaceholderSection title="Placeholders">
                         {placeholders.map(p => (
                             <div key={p.value}>
-                                <button 
-                                    onClick={() => insertPlaceholder(p.value)} 
-                                    className="w-full text-left text-blue-800 text-xs font-mono p-1 rounded hover:bg-blue-100 transition-colors"
-                                >
-                                    {p.value}
-                                </button>
+                                <button onClick={() => insertPlaceholder(p.value)} className="w-full text-left text-blue-800 text-xs font-mono p-1 rounded hover:bg-blue-100 transition-colors">{p.value}</button>
                                 <p className="text-gray-500 text-[10px] pl-1">{p.name}</p>
                             </div>
                         ))}
