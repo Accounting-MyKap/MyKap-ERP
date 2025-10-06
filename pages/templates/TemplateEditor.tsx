@@ -1,9 +1,9 @@
 // pages/templates/TemplateEditor.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 import { Template } from '../../contexts/TemplatesContext';
 import { useToast } from '../../hooks/useToast';
-import { UndoIcon, RedoIcon } from '../../components/icons';
 
 // Add more fonts to the whitelist
 const Font: any = Quill.import('formats/font');
@@ -70,13 +70,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             const editor = new Quill(editorContainerRef.current, {
                 theme: 'snow',
                 modules: {
-                    toolbar: {
-                        container: '#toolbar-container',
-                        handlers: {
-                            'undo': () => quillRef.current?.history.undo(),
-                            'redo': () => quillRef.current?.history.redo(),
-                        }
-                    },
+                    toolbar: '#toolbar-container',
                     history: {
                         delay: 500,
                         maxStack: 100,
@@ -243,8 +237,8 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                     {/* Toolbar */}
                     <div id="toolbar-container" className="border-b bg-gray-50 p-1">
                         <span className="ql-formats">
-                            <button className="ql-undo" title="Undo (Ctrl+Z)"><UndoIcon className="w-5 h-5"/></button>
-                            <button className="ql-redo" title="Redo (Ctrl+Y)"><RedoIcon className="w-5 h-5"/></button>
+                            <button className="ql-undo" title="Undo (Ctrl+Z)"></button>
+                            <button className="ql-redo" title="Redo (Ctrl+Y)"></button>
                         </span>
                         <span className="ql-formats">
                             <select className="ql-font" defaultValue="sans-serif">
