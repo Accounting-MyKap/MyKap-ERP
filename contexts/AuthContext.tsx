@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -72,6 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   
   // Ref to track the latest user ID to prevent race conditions during async operations.
   const latestUserId = useRef<string | null>(null);
@@ -119,6 +121,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } else {
             setProfile(null);
+            // Only navigate on a confirmed sign-out event.
+            if (_event === 'SIGNED_OUT') {
+                navigate('/login', { replace: true });
+            }
         }
     });
 
@@ -129,7 +135,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             subscription.unsubscribe();
         }
     };
-  }, []);
+  }, [navigate]);
 
 
   const signOut = useCallback(async () => {
@@ -138,7 +144,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (error) {
         console.error('[Sign Out] Supabase signOut error:', error);
     } else {
-        console.log('[Sign Out] Supabase sign out successful.');
+        console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup and redirect.');
+        // All state clearing and navigation is now handled declaratively by the onAuthStateChange listener.
     }
   }, []);
 
