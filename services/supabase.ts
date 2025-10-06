@@ -6,6 +6,8 @@
     readonly env: {
       readonly VITE_SUPABASE_URL: string;
       readonly VITE_SUPABASE_ANON_KEY: string;
+      // FIX: Add DEV property to the env type to allow development-only logging.
+      readonly DEV: boolean;
     }
   }
 }

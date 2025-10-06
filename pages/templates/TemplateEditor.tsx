@@ -13,7 +13,7 @@ Quill.register(Font, true);
 
 interface TemplateEditorProps {
     template: Template | null;
-    onSave: (templateId: string, newContent: string) => Promise<void>;
+    onSave: (template: Template, newContent: string) => Promise<void>;
 }
 
 // Reusable component for placeholder sections in the sidebar
@@ -49,22 +49,21 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
     const handleSave = useCallback(async () => {
         if (!template || !quillRef.current || template.isReadOnly) return;
         
-        // Capture ID and content at the moment of saving
-        const templateIdToSave = template.id;
+        // Capture template object and content at the moment of saving
+        const templateToSave = template;
         const contentToSave = quillRef.current.root.innerHTML;
         
         setSaveStatus('saving');
         try {
-            await onSave(templateIdToSave, contentToSave);
+            await onSave(templateToSave, contentToSave);
             
             // Only show success and reset status if the user is still on the same template
-            if (quillRef.current && template && template.id === templateIdToSave) {
+            if (quillRef.current && template && template.id === templateToSave.id) {
                 showToast('Template saved successfully!', 'success');
                 originalContentRef.current = contentToSave;
                 setSaveStatus('saved');
             }
         } catch (error: unknown) {
-            // ✅ MEJORA: Manejo de errores tipo-seguro
             const message = error instanceof Error 
                 ? error.message 
                 : 'An unexpected error occurred while saving';
@@ -120,7 +119,6 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             
             editor.on('text-change', textChangeHandler);
             
-            // ✅ MEJORA: Mejor limpieza
             return () => {
                 if (quillRef.current) {
                     quillRef.current.off('text-change', textChangeHandler);
