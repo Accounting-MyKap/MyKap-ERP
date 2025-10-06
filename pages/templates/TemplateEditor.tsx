@@ -70,7 +70,17 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
             const editor = new Quill(editorContainerRef.current, {
                 theme: 'snow',
                 modules: {
-                    toolbar: '#toolbar-container',
+                    toolbar: {
+                        container: '#toolbar-container',
+                        handlers: {
+                            'undo': function() {
+                                (this as any).quill.history.undo();
+                            },
+                            'redo': function() {
+                                (this as any).quill.history.redo();
+                            }
+                        }
+                    },
                     history: {
                         delay: 500,
                         maxStack: 100,
@@ -277,7 +287,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                         </span>
                     </div>
                     
-                    <div ref={editorContainerRef} className="flex-1 overflow-y-auto" />
+                    <div ref={editorContainerRef} className="flex-1 overflow-hidden" />
 
                     <div className="flex-shrink-0 border-t p-2 text-right text-sm text-gray-500 bg-gray-50">
                         Word Count: {wordCount}
