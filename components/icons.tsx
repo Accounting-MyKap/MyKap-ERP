@@ -32,7 +32,7 @@ export const MyKapIcon: React.FC<React.ImgHTMLAttributes<HTMLImageElement>> = (p
 
 
 export const HomeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a.75.75 0 011.06 0l8.955 8.955M3 10.5v.75A4.5 4.5 0 007.5 15h9a4.5 4.5 0 004.5-4.5v-.75m-15 6v-1.5a.75.75 0 01.75-.75h13.5a.75.75 0 01.75.75v1.5m-15 3v-1.5a.75.75 0 01.75-.75h13.5a.75.75 0 01.75.75v1.5M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></Icon>
+    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a.75.75 0 011.06 0l8.955 8.955M4.5 12.75L12 5.25l7.5 7.5M12 21.75V12" /></Icon>
 );
 
 export const ProspectsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -126,7 +126,7 @@ export const HistoryIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 export const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.742-.587 9.094 9.094 0 003.742.587M18 18.72V19.5a2.25 2.25 0 01-2.25 2.25H8.25A2.25 2.25 0 016 19.5V18.72m12 0c-2.246 0-4.32-.63-6-1.72m-6 1.72c-1.68-.63-3.098-1.72-4.14-3.04M18 18.72c-2.246 0-4.32-.63-6-1.72m6 1.72c-1.68-.63-3.098-1.72-4.14-3.04m-2.16-5.84a6.75 6.75 0 1013.5 0 6.75 6.75 0 00-13.5 0z" /></Icon>
+    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm6 0h-2v-1a6 6 0 00-9-5.197M15 12a4 4 0 110 5.292" /></Icon>
 );
 
 export const TemplateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
