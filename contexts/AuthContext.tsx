@@ -39,6 +39,28 @@ const fetchProfile = async (user: User | null): Promise<Profile | null> => {
         .single();
 
     if (error) {
+        // If the profile does not exist (PostgREST error code for "0 rows returned"), attempt to create it.
+        if (error.code === 'PGRST116') {
+            console.warn(`[Profile Sync] No profile found for user ${user.id}. Attempting to create one.`);
+            const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                    id: user.id,
+                    email: user.email,
+                    first_name: user.user_metadata?.first_name || '',
+                    last_name: user.user_metadata?.last_name || ''
+                })
+                .select()
+                .single();
+            
+            if (createError) {
+                console.error('[Profile Sync] Failed to auto-create profile:', createError.message);
+                return null; // Return null if creation also fails.
+            }
+            console.log('[Profile Sync] Profile auto-created successfully.');
+            return newProfile as Profile;
+        }
+
         console.error('Error fetching profile:', error.message);
         return null;
     }
@@ -121,7 +143,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } else {
             setProfile(null);
-            // Only navigate on a confirmed sign-out event.
+            // CRITICAL FIX: Add immediate navigation on SIGNED_OUT event to prevent UI flash.
             if (_event === 'SIGNED_OUT') {
                 navigate('/login', { replace: true });
             }
@@ -135,19 +157,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             subscription.unsubscribe();
         }
     };
-  }, [navigate]);
+    // CRITICAL FIX: `navigate` is stable and does not need to be a dependency.
+    // This prevents potential re-subscriptions to the auth listener.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const signOut = useCallback(async () => {
     console.log('%c[Sign Out] Attempting to sign out...', 'color: #dc3545; font-weight: bold;');
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        console.error('[Sign Out] Supabase signOut error:', error);
-    } else {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            throw error;
+        }
         console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup and redirect.');
-        // All state clearing and navigation is now handled declaratively by the onAuthStateChange listener.
+    } catch(error) {
+        console.error('[Sign Out] Supabase signOut error:', error);
+        // CRITICAL FIX: Force cleanup and redirect even if the server call fails (e.g., network error).
+        // This prevents the user from being "stuck" in a logged-in UI state.
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        navigate('/login', { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {
     console.log('%c[Update Profile] Attempting to update profile...', 'color: #28a745; font-weight: bold;', updatedProfile);
