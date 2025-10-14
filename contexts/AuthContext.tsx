@@ -95,16 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  
-  // CRITICAL FIX: Use refs to avoid stale closures while preventing re-subscriptions
-  const navigateRef = useRef(navigate);
   const latestUserId = useRef<string | null>(null);
-
-  // Keep navigateRef updated without triggering the main listener's useEffect
-  useEffect(() => {
-    navigateRef.current = navigate;
-  }, [navigate]);
 
   useEffect(() => {
     // This function handles the initial session check.
@@ -148,11 +139,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[Auth State Change] Profile fetch for ${newCurrentUser.id} aborted; user has changed.`);
             }
         } else {
+            // The declarative AuthGuard component now handles all redirection logic
+            // when the session becomes null. Removing the imperative navigation call
+            // from here resolves the race condition.
             setProfile(null);
-            // CRITICAL FIX: Use ref to call the always-up-to-date navigate function.
-            if (_event === 'SIGNED_OUT') {
-                navigateRef.current('/login', { replace: true });
-            }
         }
     });
 
@@ -163,29 +153,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             subscription.unsubscribe();
         }
     };
-    // The empty dependency array ensures this effect runs only ONCE, setting up the
-    // listener for the entire component lifecycle. The navigateRef provides a stable
-    // way to access the latest navigate function inside the listener.
   }, []);
 
 
   const signOut = useCallback(async () => {
     console.log('%c[Sign Out] Attempting to sign out...', 'color: #dc3545; font-weight: bold;');
-    try {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            throw error;
-        }
-        console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup and redirect.');
-    } catch(error) {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
         console.error('[Sign Out] Supabase signOut error:', error);
-        // Force cleanup and redirect using the ref.
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        navigateRef.current('/login', { replace: true });
+        // We throw the error so the UI can inform the user, but we do NOT force a local
+        // logout, as the user is still technically logged in on the server.
+        throw error;
     }
-  }, []); // No dependencies needed as it uses the ref.
+    // On success, the onAuthStateChange listener will automatically handle cleaning up the state.
+    console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup.');
+  }, []);
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {
     console.log('%c[Update Profile] Attempting to update profile...', 'color: #28a745; font-weight: bold;', updatedProfile);
