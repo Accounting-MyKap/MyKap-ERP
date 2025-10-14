@@ -20,7 +20,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
-  signOut: () => Promise<void>;
+  signOut: () => void;
   updateProfile: (updatedProfile: Partial<Profile>) => Promise<{ error: { message: string } | null }>;
   loading: boolean;
 }
@@ -156,26 +156,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
 
-  const signOut = useCallback(async () => {
-    console.log('%c[Sign Out] Attempting to sign out...', 'color: #dc3545; font-weight: bold;');
-    try {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            // Log the error, but allow the code to proceed to the catch block,
-            // which will handle the forced local logout.
-            throw error;
-        }
-        // On success, the onAuthStateChange listener will automatically handle cleaning up the state.
-        console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup.');
-    } catch (error) {
-        console.error('[Sign Out] Error during sign out. Forcing local state cleanup.', error);
-        // FALLBACK: If supabase.auth.signOut() fails for any reason (e.g., network timeout),
-        // we must manually clear the local state to ensure the user is logged out of the UI.
-        // This prevents the user from being stuck on a screen with an invalid session.
+  const signOut = useCallback(() => {
+    console.log('%c[Sign Out] Initiating sign out request...', 'color: #dc3545; font-weight: bold;');
+
+    // This call is now "fire-and-forget". We don't await it.
+    // The onAuthStateChange listener is the primary mechanism that will react to the user being logged out.
+    supabase.auth.signOut().catch(error => {
+        // This catch block serves as a fallback in case the signOut promise itself rejects
+        // (e.g., due to network issues) and the listener doesn't fire.
+        console.error('[Sign Out] supabase.auth.signOut() promise rejected. Forcing local state cleanup.', error);
         setSession(null);
         setUser(null);
         setProfile(null);
-    }
+    });
   }, []);
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {

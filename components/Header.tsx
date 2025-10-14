@@ -16,10 +16,10 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     const userName = profile ? `${profile.first_name} ${profile.last_name}` : '';
     const userInitial = profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() ?? 'U';
 
-    const handleSignOut = async () => {
-        await signOut();
-        // Navigation is now handled declaratively by the ProtectedRoute component
-        // which reacts to the auth state change, eliminating potential race conditions.
+    const handleSignOut = () => {
+        signOut();
+        // Navigation is handled declaratively by the AuthGuard component
+        // which reacts to the auth state change.
     };
 
     useEffect(() => {
