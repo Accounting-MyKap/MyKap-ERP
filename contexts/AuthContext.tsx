@@ -158,16 +158,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = useCallback(() => {
     console.log('%c[Sign Out] Initiating sign out request...', 'color: #dc3545; font-weight: bold;');
+    
+    // 1. Immediately clear the local session state.
+    // This provides instant feedback to the user by triggering the AuthGuard
+    // to redirect to the login page. It also resolves the issue where a hanging
+    // signOut request would leave the user stuck on the page or cause an
+    // infinite loading screen on reload.
+    setSession(null);
+    setUser(null);
+    setProfile(null);
 
-    // This call is now "fire-and-forget". We don't await it.
-    // The onAuthStateChange listener is the primary mechanism that will react to the user being logged out.
+    // 2. As a background task, inform Supabase to invalidate the session on the server.
+    // We don't await this. If it fails or hangs, the user is already logged out
+    // from the UI's perspective, which is the most important part.
     supabase.auth.signOut().catch(error => {
-        // This catch block serves as a fallback in case the signOut promise itself rejects
-        // (e.g., due to network issues) and the listener doesn't fire.
-        console.error('[Sign Out] supabase.auth.signOut() promise rejected. Forcing local state cleanup.', error);
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+        console.warn('[Sign Out] Server-side sign out failed, but local state was successfully cleared.', error);
     });
   }, []);
 

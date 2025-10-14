@@ -17,9 +17,10 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     const userInitial = profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() ?? 'U';
 
     const handleSignOut = () => {
+        console.log('%c[Sign Out] Initiating sign out request...', 'color: #dc3545; font-weight: bold;');
         signOut();
-        // Navigation is handled declaratively by the AuthGuard component
-        // which reacts to the auth state change.
+        // Navigation is now handled by the AuthGuard reacting to the immediate
+        // local state cleanup within the signOut function.
     };
 
     useEffect(() => {
