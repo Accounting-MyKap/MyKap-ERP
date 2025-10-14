@@ -97,8 +97,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Ref to track the latest user ID to prevent race conditions during async operations.
+  // CRITICAL FIX: Use refs to avoid stale closures while preventing re-subscriptions
+  const navigateRef = useRef(navigate);
   const latestUserId = useRef<string | null>(null);
+
+  // Keep navigateRef updated without triggering the main listener's useEffect
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
 
   useEffect(() => {
     // This function handles the initial session check.
@@ -143,9 +149,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } else {
             setProfile(null);
-            // CRITICAL FIX: Add immediate navigation on SIGNED_OUT event to prevent UI flash.
+            // CRITICAL FIX: Use ref to call the always-up-to-date navigate function.
             if (_event === 'SIGNED_OUT') {
-                navigate('/login', { replace: true });
+                navigateRef.current('/login', { replace: true });
             }
         }
     });
@@ -157,9 +163,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             subscription.unsubscribe();
         }
     };
-    // CRITICAL FIX: `navigate` is stable and does not need to be a dependency.
-    // This prevents potential re-subscriptions to the auth listener.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // The empty dependency array ensures this effect runs only ONCE, setting up the
+    // listener for the entire component lifecycle. The navigateRef provides a stable
+    // way to access the latest navigate function inside the listener.
   }, []);
 
 
@@ -173,14 +179,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup and redirect.');
     } catch(error) {
         console.error('[Sign Out] Supabase signOut error:', error);
-        // CRITICAL FIX: Force cleanup and redirect even if the server call fails (e.g., network error).
-        // This prevents the user from being "stuck" in a logged-in UI state.
+        // Force cleanup and redirect using the ref.
         setSession(null);
         setUser(null);
         setProfile(null);
-        navigate('/login', { replace: true });
+        navigateRef.current('/login', { replace: true });
     }
-  }, [navigate]);
+  }, []); // No dependencies needed as it uses the ref.
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {
     console.log('%c[Update Profile] Attempting to update profile...', 'color: #28a745; font-weight: bold;', updatedProfile);
@@ -190,7 +195,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error: { message: 'User not authenticated.' } };
     }
     
-    // Optimization: Check if there are any actual changes before calling Supabase.
     const hasChanges = Object.keys(updatedProfile).some(
         key => profile?.[key as keyof Profile] !== updatedProfile[key as keyof Profile]
     );
@@ -220,11 +224,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error: null };
     }
     
-    // This case should not happen if the Supabase client works as expected, but it's good practice to handle.
     console.warn('[Update Profile] Supabase returned no data and no error.');
     return { error: { message: 'Update operation returned no data.' } };
 
-  }, [user, profile]); // Added profile to dependencies for the change check.
+  }, [user, profile]);
 
   const value = {
     session,
