@@ -158,15 +158,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = useCallback(async () => {
     console.log('%c[Sign Out] Attempting to sign out...', 'color: #dc3545; font-weight: bold;');
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        console.error('[Sign Out] Supabase signOut error:', error);
-        // We throw the error so the UI can inform the user, but we do NOT force a local
-        // logout, as the user is still technically logged in on the server.
-        throw error;
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            // Log the error, but allow the code to proceed to the catch block,
+            // which will handle the forced local logout.
+            throw error;
+        }
+        // On success, the onAuthStateChange listener will automatically handle cleaning up the state.
+        console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup.');
+    } catch (error) {
+        console.error('[Sign Out] Error during sign out. Forcing local state cleanup.', error);
+        // FALLBACK: If supabase.auth.signOut() fails for any reason (e.g., network timeout),
+        // we must manually clear the local state to ensure the user is logged out of the UI.
+        // This prevents the user from being stuck on a screen with an invalid session.
+        setSession(null);
+        setUser(null);
+        setProfile(null);
     }
-    // On success, the onAuthStateChange listener will automatically handle cleaning up the state.
-    console.log('[Sign Out] Supabase sign out successful. Auth listener will handle state cleanup.');
   }, []);
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {
