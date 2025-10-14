@@ -287,7 +287,9 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onSave }) => 
                         </span>
                     </div>
                     
-                    <div ref={editorContainerRef} className="flex-1 overflow-hidden" />
+                    <div className="relative flex-1">
+                        <div ref={editorContainerRef} className="absolute inset-0" />
+                    </div>
 
                     <div className="flex-shrink-0 border-t p-2 text-right text-sm text-gray-500 bg-gray-50">
                         Word Count: {wordCount}

@@ -1,3 +1,4 @@
+// pages/templates/TemplatesPage.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Header from '../../components/Header';
@@ -24,10 +25,15 @@ const TemplatesPage: React.FC = () => {
     }, [loading, templates, selectedTemplateId]);
 
     const handleCreateTemplate = async (name: string, key: string) => {
-        const newTemplate = await createTemplate(name, key);
-        if (newTemplate) {
-            // Automatically select the new template for editing
-            setSelectedTemplateId(newTemplate.id);
+        try {
+            const newTemplate = await createTemplate(name, key);
+            if (newTemplate) {
+                // Automatically select the new template for editing
+                setSelectedTemplateId(newTemplate.id);
+            }
+        } catch (error) {
+            // Re-throw the error to be handled by the modal's catch block
+            throw error;
         }
     };
 
