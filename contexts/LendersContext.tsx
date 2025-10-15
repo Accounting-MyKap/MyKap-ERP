@@ -5,6 +5,7 @@ import { supabase } from '../services/supabase';
 interface LendersContextType {
     lenders: Lender[];
     loading: boolean;
+    error: string | null;
     addLender: (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance'>) => Promise<void>;
     updateLender: (lenderId: string, updatedData: Partial<Lender>) => Promise<void>;
     addFundsToLenderTrust: (lenderId: string, amount: number, description: string) => void;
@@ -16,6 +17,7 @@ export const LendersContext = createContext<LendersContextType | undefined>(unde
 export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [lenders, setLenders] = useState<Lender[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const syncLender = (updatedLender: Lender) => {
         setLenders(prev => prev.map(l => l.id === updatedLender.id ? updatedLender : l));
@@ -46,13 +48,15 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
     useEffect(() => {
         const fetchLenders = async () => {
             setLoading(true);
-            const { data, error } = await supabase
+            setError(null);
+            const { data, error: fetchError } = await supabase
                 .from('lenders')
                 .select('*')
                 .order('created_at', { ascending: false });
             
-            if (error) {
-                console.error("Error fetching lenders:", error);
+            if (fetchError) {
+                console.error("Error fetching lenders:", fetchError);
+                setError("Failed to load lenders. Please check your connection and try again.");
             } else {
                 setLenders(data as Lender[]);
             }
@@ -151,7 +155,7 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
         });
     };
 
-    const value = { lenders, loading, addLender, updateLender, addFundsToLenderTrust, withdrawFromLenderTrust };
+    const value = { lenders, loading, error, addLender, updateLender, addFundsToLenderTrust, withdrawFromLenderTrust };
 
     return (
         <LendersContext.Provider value={value}>

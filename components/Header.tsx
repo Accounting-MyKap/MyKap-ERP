@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 
 interface HeaderProps {
     title?: string;
@@ -9,18 +10,32 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
     const { user, profile, signOut } = useAuth();
+    const { showToast } = useToast();
     const [isDropdownOpen, setDropdownOpen] = useState(false);
+    const [isSigningOut, setIsSigningOut] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
     const userName = profile ? `${profile.first_name} ${profile.last_name}` : '';
     const userInitial = profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() ?? 'U';
 
-    const handleSignOut = () => {
+    const handleSignOut = async () => {
+        if (isSigningOut) return;
+
         console.log('%c[Sign Out] Initiating sign out request...', 'color: #dc3545; font-weight: bold;');
-        signOut();
-        // Navigation is now handled by the AuthGuard reacting to the immediate
-        // local state cleanup within the signOut function.
+        setIsSigningOut(true);
+        try {
+            await signOut();
+            // On successful sign out, the AuthGuard will handle the redirect.
+            showToast('You have been signed out successfully.', 'success');
+        } catch (error: any) {
+            console.error('Sign out error caught in header:', error);
+            showToast(error.message || 'An unexpected error occurred during sign out.', 'error');
+            setIsSigningOut(false); // Only reset state on failure
+        } finally {
+            // This might run before the redirect happens, but it's okay.
+            setDropdownOpen(false);
+        }
     };
 
     useEffect(() => {
@@ -78,10 +93,11 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
                             </Link>
                             <button
                                 onClick={handleSignOut}
-                                className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                disabled={isSigningOut}
+                                className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50"
                                 role="menuitem"
                             >
-                                Log Out
+                                {isSigningOut ? 'Signing Out...' : 'Log Out'}
                             </button>
                         </div>
                     </div>

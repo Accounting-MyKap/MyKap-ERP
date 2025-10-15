@@ -20,7 +20,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   updateProfile: (updatedProfile: Partial<Profile>) => Promise<{ error: { message: string } | null }>;
   loading: boolean;
 }
@@ -156,24 +156,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
 
-  const signOut = useCallback(() => {
-    console.log('%c[Sign Out] Initiating sign out request...', 'color: #dc3545; font-weight: bold;');
+  const signOut = useCallback(async () => {
+    console.log('%c[Sign Out] Awaiting Supabase server sign out...', 'color: #dc3545; font-weight: bold;');
     
-    // 1. Immediately clear the local session state.
-    // This provides instant feedback to the user by triggering the AuthGuard
-    // to redirect to the login page. It also resolves the issue where a hanging
-    // signOut request would leave the user stuck on the page or cause an
-    // infinite loading screen on reload.
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+        console.error('[Sign Out] Supabase sign out failed.', error);
+        // Propagate the error to be handled by the UI component that called signOut.
+        throw new Error("Sign out failed. Please check your network connection and try again.");
+    }
+
+    // On success, we clear the state. `onAuthStateChange` will also fire, but this ensures
+    // the UI reacts instantly without waiting for the listener. The redirect will
+    // be handled declaratively by the AuthGuard.
     setSession(null);
     setUser(null);
     setProfile(null);
-
-    // 2. As a background task, inform Supabase to invalidate the session on the server.
-    // We don't await this. If it fails or hangs, the user is already logged out
-    // from the UI's perspective, which is the most important part.
-    supabase.auth.signOut().catch(error => {
-        console.warn('[Sign Out] Server-side sign out failed, but local state was successfully cleared.', error);
-    });
+    console.log('[Sign Out] Supabase sign out successful, local state cleared.');
   }, []);
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {

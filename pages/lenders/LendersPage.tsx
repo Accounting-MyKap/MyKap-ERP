@@ -12,7 +12,7 @@ import { ChevronUpIcon, ChevronDownIcon, ChevronUpDownIcon } from '../../compone
 type SortKey = keyof Lender;
 
 const LendersPage: React.FC = () => {
-    const { lenders, loading, addLender } = useLenders();
+    const { lenders, loading, error, addLender } = useLenders();
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -35,9 +35,12 @@ const LendersPage: React.FC = () => {
 
         // Filtering
         if (searchTerm) {
+            const term = searchTerm.toLowerCase();
             sortableItems = sortableItems.filter(lender =>
-                lender.lender_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                lender.account.toLowerCase().includes(searchTerm.toLowerCase())
+                lender.lender_name.toLowerCase().includes(term) ||
+                lender.account.toLowerCase().includes(term) ||
+                formatCurrency(lender.portfolio_value).toLowerCase().includes(term) ||
+                formatCurrency(lender.trust_balance).toLowerCase().includes(term)
             );
         }
 
@@ -55,8 +58,8 @@ const LendersPage: React.FC = () => {
                      if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
                 } else if (typeof aValue === 'string' && typeof bValue === 'string') {
                     return sortConfig.direction === 'ascending' 
-                        ? aValue.localeCompare(bValue) 
-                        : bValue.localeCompare(aValue);
+                        ? aValue.localeCompare(bValue, undefined, { sensitivity: 'base' }) 
+                        : bValue.localeCompare(aValue, undefined, { sensitivity: 'base' });
                 }
                 return 0;
             });
@@ -89,6 +92,13 @@ const LendersPage: React.FC = () => {
     return (
         <DashboardLayout>
             <Header title="Lenders" subtitle="Manage and track third-party funding sources." />
+            
+            {error && (
+                <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                    <p className="text-sm text-red-700">{error}</p>
+                </div>
+            )}
+            
             <div className="bg-white rounded-xl shadow-md p-6">
                 <LendersHeader 
                     onNewLenderClick={() => setIsModalOpen(true)}
@@ -104,26 +114,61 @@ const LendersPage: React.FC = () => {
                                 <SortableHeader sortKey="lender_name">Lender Name</SortableHeader>
                                 <SortableHeader sortKey="portfolio_value">Portfolio Value</SortableHeader>
                                 <SortableHeader sortKey="trust_balance">Trust Balance</SortableHeader>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={4} className="text-center p-4">
-                                     <div className="flex items-center justify-center">
-                                        <svg className="animate-spin h-5 w-5 mr-3 text-blue-600" viewBox="0 0 24 24">
+                                <tr><td colSpan={5} className="text-center p-8">
+                                    <div className="flex items-center justify-center">
+                                        <svg className="animate-spin h-8 w-8 mr-3 text-blue-600" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        Loading...
+                                        <span className="text-gray-600">Loading lenders...</span>
+                                    </div>
+                                </td></tr>
+                            ) : filteredAndSortedLenders.length === 0 ? (
+                                <tr><td colSpan={5} className="text-center p-8">
+                                    <div className="text-gray-500">
+                                        {searchTerm ? (
+                                            <>
+                                                <p className="text-lg font-medium mb-2">No lenders found</p>
+                                                <p className="text-sm">Try adjusting your search criteria</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-lg font-medium mb-2">No lenders yet</p>
+                                                <p className="text-sm text-gray-400">Click "Add Lender" to create your first one</p>
+                                            </>
+                                        )}
                                     </div>
                                 </td></tr>
                             ) : (
                                 filteredAndSortedLenders.map((lender) => (
-                                    <tr key={lender.id} onClick={() => handleRowClick(lender.id)} className="hover:bg-gray-50 cursor-pointer">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">{lender.account}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{lender.lender_name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(lender.portfolio_value)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(lender.trust_balance)}</td>
+                                    <tr key={lender.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
+                                            {lender.account}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {lender.lender_name}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            {formatCurrency(lender.portfolio_value)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                            {formatCurrency(lender.trust_balance)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button
+                                                onClick={() => handleRowClick(lender.id)}
+                                                className="text-blue-600 hover:text-blue-900 transition-colors"
+                                            >
+                                                View Details
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -132,11 +177,13 @@ const LendersPage: React.FC = () => {
                 </div>
             </div>
 
-            <AddLenderModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={addLender}
-            />
+            {isModalOpen && (
+                <AddLenderModal 
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onSave={addLender}
+                />
+            )}
         </DashboardLayout>
     );
 };
