@@ -6,20 +6,20 @@ import { formatNumber, parseCurrency } from '../../../utils/formatters';
 interface AddDepositModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (event: Omit<TrustAccountEvent, 'id' | 'balance'>) => void;
+    onSave: (event: Omit<TrustAccountEvent, 'id'>) => void;
 }
 
 const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSave }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [type, setType] = useState<'deposit' | 'withdrawal' | 'distribution'>('deposit');
+    const [type, setType] = useState<'deposit' | 'withdrawal'>('deposit');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({
-            date,
-            type,
+            event_date: date,
+            event_type: type,
             description,
             amount,
         });
@@ -38,15 +38,7 @@ const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSa
                     <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
                     <input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} className="input-field mt-1" required />
                 </div>
-                <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type</label>
-                    <select id="type" value={type} onChange={e => setType(e.target.value as any)} className="input-field mt-1" required>
-                        <option value="deposit">Deposit</option>
-                        <option value="withdrawal">Withdrawal</option>
-                        <option value="distribution">Distribution</option>
-                    </select>
-                </div>
-                <div>
+                 <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
                     <input type="text" id="description" value={description} onChange={e => setDescription(e.target.value)} className="input-field mt-1" required />
                 </div>

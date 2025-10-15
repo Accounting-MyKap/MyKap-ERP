@@ -5,7 +5,8 @@ import { Lender } from '../prospects/types';
 interface AddLenderModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance'>) => void;
+    // FIX: Aligned the onSave prop type with the addLender function from the context.
+    onSave: (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance' | 'updated_at' | 'trust_account_events'>) => void;
     lenderToEdit?: Lender | null;
 }
 

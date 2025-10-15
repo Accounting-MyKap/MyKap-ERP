@@ -140,6 +140,17 @@ export interface CoBorrower {
     relation_type?: string;
 }
 
+export interface TrustAccountEvent {
+    id: string;
+    event_date: string; // YYYY-MM-DD
+    event_type: 'deposit' | 'withdrawal';
+    description: string;
+    amount: number;
+    // FIX: Add optional balance property to align with its use in calculating running balances.
+    balance?: number;
+}
+
+
 export interface Lender {
     id: string;
     account: string;
@@ -147,17 +158,11 @@ export interface Lender {
     address?: Address;
     portfolio_value: number;
     trust_balance: number;
-    trust_account_history?: TrustAccountEvent[];
+    trust_account_events?: TrustAccountEvent[];
+    updated_at: string; // Added for optimistic locking
 }
 
-export interface TrustAccountEvent {
-    id: string;
-    date: string; // YYYY-MM-DD
-    type: 'deposit' | 'withdrawal' | 'distribution';
-    description: string;
-    amount: number;
-    balance: number;
-}
+
 
 
 export interface Prospect {

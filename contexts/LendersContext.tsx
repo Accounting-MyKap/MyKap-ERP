@@ -6,10 +6,10 @@ interface LendersContextType {
     lenders: Lender[];
     loading: boolean;
     error: string | null;
-    addLender: (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance'>) => Promise<void>;
-    updateLender: (lenderId: string, updatedData: Partial<Lender>) => Promise<void>;
-    addFundsToLenderTrust: (lenderId: string, amount: number, description: string) => void;
-    withdrawFromLenderTrust: (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'balance' | 'type'>) => void;
+    addLender: (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance' | 'updated_at' | 'trust_account_events'>) => Promise<void>;
+    updateLender: (lenderId: string, updatedData: Partial<Omit<Lender, 'trust_account_events'>>) => Promise<void>;
+    addFundsToLenderTrust: (lenderId: string, amount: number, description: string) => Promise<void>;
+    withdrawFromLenderTrust: (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'event_type'>) => Promise<void>;
 }
 
 export const LendersContext = createContext<LendersContextType | undefined>(undefined);
@@ -19,31 +19,47 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const syncLender = (updatedLender: Lender) => {
-        setLenders(prev => prev.map(l => l.id === updatedLender.id ? updatedLender : l));
-    };
+    const handleLenderUpdate = useCallback(async (lenderId: string, updateFunction: (lender: Lender) => Partial<Lender>) => {
+        const originalLender = lenders.find(l => l.id === lenderId);
+        if (!originalLender) {
+            throw new Error("Lender not found for update.");
+        }
 
-    const handleLenderUpdate = useCallback(async (lenderId: string, updateFunction: (lender: Lender) => Lender) => {
-        const lenderToUpdate = lenders.find(p => p.id === lenderId);
-        if (!lenderToUpdate) return;
+        const updates = updateFunction(originalLender);
+        const updatedLender = { ...originalLender, ...updates };
 
-        const updatedLender = updateFunction(lenderToUpdate);
-        syncLender(updatedLender); // Optimistic update
-
+        // Optimistic update
+        setLenders(prevLenders => prevLenders.map(l => (l.id === lenderId ? updatedLender : l)));
+        
+        const newUpdatedAt = new Date().toISOString();
+        
+        // Implement optimistic locking by checking updated_at
         const { data, error } = await supabase
             .from('lenders')
-            .update(updatedLender)
+            .update({ ...updates, updated_at: newUpdatedAt })
             .eq('id', lenderId)
-            .select()
+            .eq('updated_at', originalLender.updated_at)
+            .select('*, trust_account_events(*)')
             .single();
 
         if (error) {
             console.error('Failed to update lender:', error.message);
-            syncLender(lenderToUpdate); // Revert
-        } else if (data) {
-            syncLender(data); // Sync with DB
+            // Revert on error
+            setLenders(prevLenders => prevLenders.map(l => (l.id === lenderId ? originalLender : l)));
+            throw new Error(`Update failed: ${error.message}`);
         }
+
+        if (!data) {
+            // Concurrency conflict
+            console.warn('Concurrency conflict detected. Reverting optimistic update.');
+            setLenders(prevLenders => prevLenders.map(l => (l.id === lenderId ? originalLender : l)));
+            throw new Error("This lender was updated by someone else. Please refresh and try again.");
+        }
+        
+        // Sync with the database state
+        setLenders(prevLenders => prevLenders.map(l => (l.id === lenderId ? data as Lender : l)));
     }, [lenders]);
+
 
     useEffect(() => {
         const fetchLenders = async () => {
@@ -51,7 +67,7 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
             setError(null);
             const { data, error: fetchError } = await supabase
                 .from('lenders')
-                .select('*')
+                .select('*, trust_account_events(*)') // Fetch lenders and their related events
                 .order('created_at', { ascending: false });
             
             if (fetchError) {
@@ -65,8 +81,8 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
         fetchLenders();
     }, []);
 
-    const addLender = async (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance'>) => {
-        const newLender: Omit<Lender, 'id' | 'created_at'> = {
+    const addLender = async (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance' | 'updated_at' | 'trust_account_events'>) => {
+        const newLender: Omit<Lender, 'id' | 'created_at' | 'updated_at' | 'trust_account_events'> = {
             portfolio_value: 0,
             trust_balance: 0,
             ...lenderData,
@@ -74,85 +90,98 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         const { data, error } = await supabase
             .from('lenders')
-            .insert([newLender])
-            .select()
+            .insert(newLender)
+            .select('*, trust_account_events(*)') // Also fetch events for the new lender
             .single();
 
         if (error) {
             console.error("Error adding lender:", error);
+            throw new Error(error.message || "Could not add lender.");
         } else if (data) {
-            setLenders(prev => [data, ...prev]);
+            setLenders(prev => [data as Lender, ...prev]);
         }
     };
 
-    const updateLender = async (lenderId: string, updatedData: Partial<Lender>) => {
+    const updateLender = async (lenderId: string, updatedData: Partial<Omit<Lender, 'trust_account_events'>>) => {
+        await handleLenderUpdate(lenderId, () => updatedData);
+    };
+
+    // Generic function to handle a new trust transaction via RPC
+    const addTrustTransaction = async (
+        lenderId: string,
+        type: 'deposit' | 'withdrawal',
+        eventData: { event_date: string; description: string; amount: number }
+    ) => {
         const originalLender = lenders.find(l => l.id === lenderId);
-        if (!originalLender) return;
+        if (!originalLender) throw new Error("Lender not found.");
 
-        // Optimistic update
-        setLenders(prev => prev.map(l => l.id === lenderId ? { ...l, ...updatedData } : l));
+        if (eventData.amount <= 0 || !Number.isFinite(eventData.amount)) {
+            throw new Error("Transaction amount must be a positive number.");
+        }
+        if (!eventData.description || eventData.description.trim() === '') {
+            throw new Error("A description is required for the transaction.");
+        }
+        if (type === 'withdrawal' && originalLender.trust_balance < eventData.amount) {
+            throw new Error("Insufficient funds for withdrawal.");
+        }
 
-        const { data, error } = await supabase
-            .from('lenders')
-            .update(updatedData)
-            .eq('id', lenderId)
-            .select()
-            .single();
-        
+        // Optimistic Update
+        const amountChange = type === 'deposit' ? eventData.amount : -eventData.amount;
+        const newEvent: TrustAccountEvent = {
+            id: `temp-${crypto.randomUUID()}`,
+            ...eventData,
+            event_type: type,
+        };
+        const optimisticallyUpdatedLender = {
+            ...originalLender,
+            trust_balance: originalLender.trust_balance + amountChange,
+            trust_account_events: [...(originalLender.trust_account_events || []), newEvent].sort((a,b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()),
+        };
+        setLenders(prev => prev.map(l => l.id === lenderId ? optimisticallyUpdatedLender : l));
+
+        // Call RPC
+        const { error } = await supabase.rpc('add_trust_transaction', {
+            p_lender_id: lenderId,
+            p_event_type: type,
+            p_event_date: eventData.event_date,
+            p_description: eventData.description,
+            p_amount: eventData.amount
+        });
+
         if (error) {
-            console.error("Error updating lender:", error);
-            // Revert on error
+            console.error(`Error during ${type}:`, error);
+            // Revert on failure
             setLenders(prev => prev.map(l => l.id === lenderId ? originalLender : l));
-            throw error;
-        } else if(data) {
-            // Sync with DB state
-            setLenders(prev => prev.map(l => l.id === lenderId ? data : l));
+            throw new Error(`Failed to record ${type}.`);
+        }
+
+        // Fetch fresh data to re-sync state after successful RPC
+        const { data: updatedLender, error: fetchError } = await supabase
+            .from('lenders')
+            .select('*, trust_account_events(*)')
+            .eq('id', lenderId)
+            .single();
+
+        if (fetchError) {
+             console.error("Failed to re-sync lender state:", fetchError);
+             // Revert if re-sync fails
+             setLenders(prev => prev.map(l => l.id === lenderId ? originalLender : l));
+        } else if (updatedLender) {
+            setLenders(prev => prev.map(l => l.id === lenderId ? updatedLender as Lender : l));
         }
     };
 
-    const addFundsToLenderTrust = (lenderId: string, amount: number, description: string) => {
-        handleLenderUpdate(lenderId, (lender) => {
-            const newTrustBalance = lender.trust_balance + amount;
-            const newHistoryEvent: TrustAccountEvent = {
-                id: `evt-${crypto.randomUUID()}`,
-                date: new Date().toISOString().split('T')[0],
-                type: 'deposit',
-                description,
-                amount,
-                balance: newTrustBalance
-            };
-            const updatedHistory = [...(lender.trust_account_history || []), newHistoryEvent];
-            return {
-                ...lender,
-                trust_balance: newTrustBalance,
-                trust_account_history: updatedHistory,
-            };
+
+    const addFundsToLenderTrust = async (lenderId: string, amount: number, description: string): Promise<void> => {
+        await addTrustTransaction(lenderId, 'deposit', {
+            event_date: new Date().toISOString().split('T')[0],
+            description,
+            amount
         });
     };
 
-    const withdrawFromLenderTrust = (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'balance' | 'type'>) => {
-         handleLenderUpdate(lenderId, (lender) => {
-            const newEvent: TrustAccountEvent = {
-                id: `evt-${crypto.randomUUID()}`,
-                ...eventData,
-                type: 'withdrawal',
-                balance: 0, // Recalculated below
-            };
-            const newHistory = [...(lender.trust_account_history || []), newEvent].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            
-            let currentBalance = 0;
-            const updatedHistory = newHistory.map(event => {
-                const amountChange = event.type === 'deposit' ? event.amount : -event.amount;
-                currentBalance += amountChange;
-                return { ...event, balance: currentBalance };
-            });
-
-            return {
-                ...lender,
-                trust_balance: currentBalance,
-                trust_account_history: updatedHistory,
-            };
-        });
+    const withdrawFromLenderTrust = async (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'event_type'>): Promise<void> => {
+        await addTrustTransaction(lenderId, 'withdrawal', eventData);
     };
 
     const value = { lenders, loading, error, addLender, updateLender, addFundsToLenderTrust, withdrawFromLenderTrust };

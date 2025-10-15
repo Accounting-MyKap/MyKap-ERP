@@ -51,8 +51,9 @@ const LoanDetailPage: React.FC = () => {
                     newEvent.distributions.forEach(dist => {
                         const funder = loan.funders?.find(f => f.id === dist.funderId);
                         if (funder) {
+                            // FIX: Changed 'date' property to 'event_date' to match TrustAccountEvent type.
                             withdrawFromLenderTrust(funder.lender_id, {
-                                date: newEvent.date_received,
+                                event_date: newEvent.date_received,
                                 amount: dist.amount,
                                 description: `Funding for loan ${loan.prospect_code}`
                             });
@@ -103,8 +104,9 @@ const LoanDetailPage: React.FC = () => {
                         funder.principal_balance += dist.amount;
                         const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
                         if(lenderToUpdate) {
+                            // FIX: Changed 'date' property to 'event_date' to match TrustAccountEvent type.
                             withdrawFromLenderTrust(lenderToUpdate.lender_id, {
-                                date: eventToDelete.date_received,
+                                event_date: eventToDelete.date_received,
                                 amount: dist.amount,
                                 description: `Reversal of payment for loan ${loan.prospect_code}`
                             });

@@ -99,36 +99,43 @@ export const useLenders = () => {
     const addFundsToLenderTrust = (lenderId: string, amount: number, description: string) => {
         handleLenderUpdate(lenderId, (lender) => {
             const newTrustBalance = lender.trust_balance + amount;
+            // FIX: Changed 'date' to 'event_date' and 'type' to 'event_type' to match the TrustAccountEvent type.
             const newHistoryEvent: TrustAccountEvent = {
                 id: `evt-${crypto.randomUUID()}`,
-                date: new Date().toISOString().split('T')[0],
-                type: 'deposit',
+                event_date: new Date().toISOString().split('T')[0],
+                event_type: 'deposit',
                 description,
                 amount,
                 balance: newTrustBalance
             };
-            const updatedHistory = [...(lender.trust_account_history || []), newHistoryEvent];
+            // FIX: Changed 'trust_account_history' to 'trust_account_events' to match the Lender type.
+            const updatedHistory = [...(lender.trust_account_events || []), newHistoryEvent];
             return {
                 ...lender,
                 trust_balance: newTrustBalance,
-                trust_account_history: updatedHistory,
+                // FIX: Changed 'trust_account_history' to 'trust_account_events' to match the Lender type.
+                trust_account_events: updatedHistory,
             };
         });
     };
 
-    const withdrawFromLenderTrust = (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'balance' | 'type'>) => {
+    // FIX: Corrected the Omit type to use 'event_type' instead of 'type'.
+    const withdrawFromLenderTrust = (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'balance' | 'event_type'>) => {
          handleLenderUpdate(lenderId, (lender) => {
+            // FIX: Changed 'type' to 'event_type' to match the TrustAccountEvent type.
             const newEvent: TrustAccountEvent = {
                 id: `evt-${crypto.randomUUID()}`,
                 ...eventData,
-                type: 'withdrawal',
+                event_type: 'withdrawal',
                 balance: 0, // Recalculated below
             };
-            const newHistory = [...(lender.trust_account_history || []), newEvent].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            // FIX: Changed 'trust_account_history' to 'trust_account_events' and 'a.date'/'b.date' to 'a.event_date'/'b.event_date'.
+            const newHistory = [...(lender.trust_account_events || []), newEvent].sort((a,b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
             
             let currentBalance = 0;
             const updatedHistory = newHistory.map(event => {
-                const amountChange = event.type === 'deposit' ? event.amount : -event.amount;
+                // FIX: Changed 'event.type' to 'event.event_type'.
+                const amountChange = event.event_type === 'deposit' ? event.amount : -event.amount;
                 currentBalance += amountChange;
                 return { ...event, balance: currentBalance };
             });
@@ -136,7 +143,8 @@ export const useLenders = () => {
             return {
                 ...lender,
                 trust_balance: currentBalance,
-                trust_account_history: updatedHistory,
+                // FIX: Changed 'trust_account_history' to 'trust_account_events' to match the Lender type.
+                trust_account_events: updatedHistory,
             };
         });
     };

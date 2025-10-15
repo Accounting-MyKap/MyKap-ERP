@@ -6,7 +6,7 @@ import { formatCurrency, formatNumber, parseCurrency } from '../../../utils/form
 interface WithdrawTrustModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (event: Omit<TrustAccountEvent, 'id' | 'balance' | 'type'>) => void;
+    onSave: (event: Omit<TrustAccountEvent, 'id' | 'event_type'>) => void;
     currentBalance: number;
 }
 
@@ -31,7 +31,7 @@ const WithdrawTrustModal: React.FC<WithdrawTrustModalProps> = ({ isOpen, onClose
         if (!isAmountValid) return;
         
         onSave({
-            date,
+            event_date: date,
             description,
             amount: withdrawalAmount,
         });

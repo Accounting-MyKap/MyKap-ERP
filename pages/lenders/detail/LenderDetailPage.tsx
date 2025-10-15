@@ -51,7 +51,9 @@ const LenderDetailPage: React.FC = () => {
             case 'info':
                 return <LenderInfoSection lender={lender} onUpdate={updateLender} />;
             case 'trust_account':
-                return <TrustAccountSection lender={lender} onUpdate={updateLender} />;
+                // FIX: Removed the 'onUpdate' prop as it's not defined in TrustAccountSectionProps.
+                // The component uses a hook for its update logic.
+                return <TrustAccountSection lender={lender} />;
             case 'portfolio':
                 return <PortfolioSection lender={lender} allLoans={allLoans} />;
             default:
