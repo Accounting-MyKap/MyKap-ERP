@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
-import { useLenders } from '../useLenders';
-import { useProspects } from '../../prospects/useProspects';
+import { useLenders } from '../../../hooks/useLenders';
+import { useProspects } from '../../../hooks/useProspects';
 import { Lender } from '../../prospects/types';
 import LenderDetailSidebar, { Section } from './LenderDetailSidebar';
 import LenderDetailHeader from './LenderDetailHeader';

@@ -5,7 +5,7 @@ import ProspectsHeader from './ProspectsHeader';
 import ProspectsList from './ProspectsList';
 import ProspectDetailView from './ProspectDetailView';
 import CreateProspectModal from './CreateProspectModal';
-import { useProspects } from './useProspects';
+import { useProspects } from '../../hooks/useProspects';
 import { Prospect } from './types';
 
 export type FilterType = 'all' | 'month' | 'active' | 'completed' | 'rejected';

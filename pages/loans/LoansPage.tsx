@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Header from '../../components/Header';
-import { useProspects } from '../prospects/useProspects';
+import { useProspects } from '../../hooks/useProspects';
 import { Prospect } from '../prospects/types';
 import LoansTable from './LoansTable';
 
