@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Header from '../../components/Header';
-import ProspectsHeader from './ProspectsHeader';
-import ProspectsList from './ProspectsList';
+import ProspectsHeader from './components/ProspectsHeader';
+import ProspectsList from './components/ProspectsList';
 import ProspectDetailView from './ProspectDetailView';
-import CreateProspectModal from './CreateProspectModal';
+import CreateProspectModal from './components/CreateProspectModal';
 import { useProspects } from '../../hooks/useProspects';
 import { Prospect } from './types';
 

@@ -6,8 +6,8 @@ import StagesSection from './detail/sections/StagesSection';
 import CoBorrowersSection from '../loans/detail/sections/CoBorrowersSection';
 import PropertiesSection from '../loans/detail/sections/PropertiesSection';
 import TermsSection from '../loans/detail/sections/TermsSection';
-import GenerateDocumentModal from './GenerateDocumentModal';
-import EditProspectModal from './EditProspectModal';
+import GenerateDocumentModal from './components/GenerateDocumentModal';
+import EditProspectModal from './components/EditProspectModal';
 import { ReopenIcon, GenerateDocsIcon, EditIcon } from '../../components/icons';
 
 interface ProspectDetailViewProps {

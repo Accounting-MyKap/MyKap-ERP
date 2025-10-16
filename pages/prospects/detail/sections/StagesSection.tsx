@@ -1,8 +1,8 @@
 // pages/prospects/detail/sections/StagesSection.tsx
 import React from 'react';
 import { Prospect, ApplicantType, DocumentStatus, ClosingDocStatusKey } from '../../types';
-import StageStepper from '../../StageStepper';
-import StageSection from '../../StageSection';
+import StageStepper from '../../components/StageStepper';
+import StageSection from '../../components/StageSection';
 
 interface StagesSectionProps {
     prospect: Prospect;

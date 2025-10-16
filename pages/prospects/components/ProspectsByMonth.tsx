@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Prospect } from './types';
+import { Prospect } from '../types';
 import ProspectCard from './ProspectCard';
-import { ChevronDownIcon, ChevronRightIcon } from '../../components/icons';
+import { ChevronDownIcon, ChevronRightIcon } from '../../../components/icons';
 
 interface ProspectsByMonthProps {
     prospects: Prospect[];

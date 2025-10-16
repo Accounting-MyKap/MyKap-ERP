@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '../../components/ui/Modal';
-import { Prospect, UserProfile } from './types';
-import { useToast } from '../../hooks/useToast';
+import Modal from '../../../components/ui/Modal';
+import { Prospect, UserProfile } from '../types';
+import { useToast } from '../../../hooks/useToast';
 
 interface EditProspectModalProps {
     isOpen: boolean;

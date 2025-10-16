@@ -1,0 +1,179 @@
+import React, { useState, useEffect } from 'react';
+import Modal from '../../../components/ui/Modal';
+import { UserProfile, Prospect } from '../types';
+import { AddIcon } from '../../../components/icons';
+import { formatNumber, parseCurrency } from '../../../utils/formatters';
+
+interface CreateProspectModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onAddProspect: (prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => void;
+    users: UserProfile[];
+}
+
+const CreateProspectModal: React.FC<CreateProspectModalProps> = ({ isOpen, onClose, onAddProspect, users }) => {
+    const [borrowerName, setBorrowerName] = useState('');
+    const [prospectCode, setProspectCode] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [loanAmount, setLoanAmount] = useState<number | ''>('');
+    const [loanAmountDisplay, setLoanAmountDisplay] = useState('');
+    const [borrowerType, setBorrowerType] = useState<'individual' | 'company' | 'both'>('individual');
+    const [loanType, setLoanType] = useState<'purchase' | 'refinance'>('purchase');
+    const [county, setCounty] = useState('');
+    const [state, setState] = useState('');
+    const [assignedTo, setAssignedTo] = useState('');
+    const [error, setError] = useState('');
+
+    // Reset form state when modal is closed to ensure it's fresh on reopen
+    useEffect(() => {
+        if (!isOpen) {
+            // A small delay can prevent flickering as the modal closes
+            setTimeout(() => {
+                setBorrowerName('');
+                setProspectCode('');
+                setEmail('');
+                setPhone('');
+                setLoanAmount('');
+                setLoanAmountDisplay('');
+                setBorrowerType('individual');
+                setLoanType('purchase');
+                setCounty('');
+                setState('');
+                setAssignedTo('');
+                setError('');
+            }, 150);
+        }
+    }, [isOpen]);
+
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!borrowerName || !assignedTo || !prospectCode) {
+            setError('Borrower Name, Account, and Assigned To are required.');
+            return;
+        }
+        
+        onAddProspect({
+            borrower_name: borrowerName,
+            prospect_code: prospectCode,
+            email,
+            phone_number: phone,
+            loan_amount: loanAmount || 0,
+            borrower_type: borrowerType,
+            loan_type: loanType,
+            county,
+            state,
+            assigned_to: assignedTo,
+        });
+
+        // Form reset is now handled by useEffect. Just close the modal.
+        onClose();
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Create New Prospect">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label htmlFor="borrowerName" className="block text-sm font-medium text-gray-700">Borrower Name</label>
+                    <input type="text" id="borrowerName" value={borrowerName} onChange={e => setBorrowerName(e.target.value)} className="input-field mt-1" placeholder="E.g., John Doe or Innovate Corp" required/>
+                </div>
+                <div>
+                    <label htmlFor="prospectCode" className="block text-sm font-medium text-gray-700">Account</label>
+                    <input type="text" id="prospectCode" value={prospectCode} onChange={e => setProspectCode(e.target.value)} className="input-field mt-1" placeholder="E.g., HKF-ML0035" required/>
+                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" value={email} onChange={e => setEmail(e.target.value)} className="input-field mt-1" placeholder="E.g., name@example.com" />
+                    </div>
+                    <div>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="tel" id="phone" value={phone} onChange={e => setPhone(e.target.value)} className="input-field mt-1" placeholder="E.g., 305-555-1234" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="county" className="block text-sm font-medium text-gray-700">County</label>
+                        <input type="text" id="county" value={county} onChange={e => setCounty(e.target.value)} className="input-field mt-1" placeholder="E.g., Miami-Dade"/>
+                    </div>
+                    <div>
+                        <label htmlFor="state" className="block text-sm font-medium text-gray-700">State</label>
+                        <input type="text" id="state" value={state} onChange={e => setState(e.target.value)} className="input-field mt-1" placeholder="E.g., FL"/>
+                    </div>
+                </div>
+                <div>
+                    <label htmlFor="loanAmount" className="block text-sm font-medium text-gray-700">Loan Amount</label>
+                    <div className="input-container mt-1">
+                        <span className="input-adornment">$</span>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            id="loanAmount"
+                            value={loanAmountDisplay}
+                            onChange={e => {
+                                const value = e.target.value;
+                                // Directly set display value to what user types for natural input feel
+                                setLoanAmountDisplay(value);
+                                // Parse it for the numeric state
+                                const parsed = parseCurrency(value);
+                                setLoanAmount(parsed === 0 ? '' : parsed);
+                            }}
+                            onBlur={() => {
+                                // Format the number on blur for a clean display
+                                if (loanAmount) {
+                                    setLoanAmountDisplay(formatNumber(loanAmount));
+                                } else {
+                                    setLoanAmountDisplay('');
+                                }
+                            }}
+                            className="input-field input-field-with-adornment-left text-right"
+                            placeholder="250,000" />
+                    </div>
+                </div>
+                
+                {/* Borrower Type Radio */}
+                <div>
+                    <span className="block text-sm font-medium text-gray-700">Borrower Type</span>
+                    <div className="mt-2 flex space-x-4">
+                        <label className="flex items-center"><input type="radio" name="borrowerType" value="individual" checked={borrowerType === 'individual'} onChange={() => setBorrowerType('individual')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Individual</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrowerType" value="company" checked={borrowerType === 'company'} onChange={() => setBorrowerType('company')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Company</span></label>
+                        <label className="flex items-center"><input type="radio" name="borrowerType" value="both" checked={borrowerType === 'both'} onChange={() => setBorrowerType('both')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Both</span></label>
+                    </div>
+                </div>
+
+                {/* Loan Type Radio */}
+                 <div>
+                    <span className="block text-sm font-medium text-gray-700">Loan Type</span>
+                    <div className="mt-2 flex space-x-4">
+                        <label className="flex items-center"><input type="radio" name="loanType" value="purchase" checked={loanType === 'purchase'} onChange={() => setLoanType('purchase')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Purchase</span></label>
+                        <label className="flex items-center"><input type="radio" name="loanType" value="refinance" checked={loanType === 'refinance'} onChange={() => setLoanType('refinance')} className="h-4 w-4 text-blue-600"/> <span className="ml-2">Refinance</span></label>
+                    </div>
+                </div>
+
+                <div>
+                    <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700">Assigned to</label>
+                    <select id="assignedTo" value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="input-field mt-1" required>
+                        <option value="" disabled>Select user...</option>
+                        {users.map(user => (
+                            <option key={user.id} value={user.id}>{user.first_name} {user.last_name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {error && <p className="text-sm text-red-600">{error}</p>}
+
+                <div className="pt-4 flex justify-end space-x-3">
+                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button type="submit" className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md hover:bg-blue-700 flex items-center">
+                        <AddIcon className="h-5 w-5 mr-1"/> Create Prospect
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+export default CreateProspectModal;

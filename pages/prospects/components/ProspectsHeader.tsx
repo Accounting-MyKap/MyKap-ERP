@@ -1,7 +1,7 @@
 import React from 'react';
-import { FilterType } from './ProspectsPage';
-import { AddIcon } from '../../components/icons';
-import { useAuth } from '../../hooks/useAuth';
+import { FilterType } from '../ProspectsPage';
+import { AddIcon } from '../../../components/icons';
+import { useAuth } from '../../../hooks/useAuth';
 
 interface ProspectsHeaderProps {
     activeFilter: FilterType;

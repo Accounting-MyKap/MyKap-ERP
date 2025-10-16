@@ -1,6 +1,6 @@
 import React from 'react';
-import { Stage } from './types';
-import { CheckCircleIcon } from '../../components/icons';
+import { Stage } from '../types';
+import { CheckCircleIcon } from '../../../components/icons';
 
 interface StageStepperProps {
     stages: Stage[];

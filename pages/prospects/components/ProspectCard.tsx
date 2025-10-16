@@ -1,5 +1,5 @@
 import React from 'react';
-import { Prospect } from './types';
+import { Prospect } from '../types';
 
 interface ProspectCardProps {
     prospect: Prospect;

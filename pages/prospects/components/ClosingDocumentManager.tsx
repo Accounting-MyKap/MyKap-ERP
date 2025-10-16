@@ -1,7 +1,7 @@
 // This file was missing. It defines the component for managing documents in the 'Closing' stage.
 import React, { useState, useRef } from 'react';
-import { Document, ClosingDocStatusKey } from './types';
-import { UploadIcon, CloseIcon } from '../../components/icons';
+import { Document, ClosingDocStatusKey } from '../types';
+import { UploadIcon, CloseIcon } from '../../../components/icons';
 
 interface ClosingDocumentManagerProps {
     documents: Document[];

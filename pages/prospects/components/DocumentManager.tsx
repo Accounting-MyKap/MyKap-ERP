@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Document, DocumentStatus } from './types';
-import { AddIcon, TrashIcon, UploadIcon, CloseIcon } from '../../components/icons';
+import { Document, DocumentStatus } from '../types';
+import { AddIcon, TrashIcon, UploadIcon, CloseIcon } from '../../../components/icons';
 
 interface DocumentManagerProps {
     title: string;

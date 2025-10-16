@@ -7,11 +7,11 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import 'pdfmake/build/vfs_fonts';
 import htmlToPdfmake from 'html-to-pdfmake';
 
-import Modal from '../../components/ui/Modal';
-import { Prospect } from './types';
-import { formatCurrency, formatPercent, numberToWords } from '../../utils/formatters';
-import { useToast } from '../../hooks/useToast';
-import { useTemplates } from '../../hooks/useTemplates';
+import Modal from '../../../components/ui/Modal';
+import { Prospect } from '../types';
+import { formatCurrency, formatPercent, numberToWords } from '../../../utils/formatters';
+import { useToast } from '../../../hooks/useToast';
+import { useTemplates } from '../../../hooks/useTemplates';
 
 // Manually assign the virtual file system from the global scope to the imported pdfMake instance.
 // This is necessary because the UMD module for fonts and the UMD module for pdfmake

@@ -1,9 +1,9 @@
 // This file was missing. It defines the collapsible section for each prospect stage.
 import React from 'react';
-import { Stage, Prospect, DocumentStatus, ApplicantType, ClosingDocStatusKey } from './types';
+import { Stage, Prospect, DocumentStatus, ApplicantType, ClosingDocStatusKey } from '../types';
 import DocumentManager from './DocumentManager';
 import ClosingDocumentManager from './ClosingDocumentManager';
-import { ChevronDownIcon, ChevronUpIcon } from '../../components/icons';
+import { ChevronDownIcon, ChevronUpIcon } from '../../../components/icons';
 
 interface StageSectionProps {
     stage: Stage;
