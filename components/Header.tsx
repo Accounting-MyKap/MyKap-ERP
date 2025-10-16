@@ -21,21 +21,21 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
 
     const handleSignOut = async () => {
         if (isSigningOut) return;
-
-        console.log('%c[Sign Out] Initiating sign out request...', 'color: #dc3545; font-weight: bold;');
         setIsSigningOut(true);
-        try {
-            await signOut();
-            // On successful sign out, the AuthGuard will handle the redirect.
-            showToast('You have been signed out successfully.', 'success');
-        } catch (error: any) {
-            console.error('Sign out error caught in header:', error);
-            showToast(error.message || 'An unexpected error occurred during sign out.', 'error');
-            setIsSigningOut(false); // Only reset state on failure
-        } finally {
-            // This might run before the redirect happens, but it's okay.
-            setDropdownOpen(false);
-        }
+
+        // The new signOut function from context is robust and handles navigation.
+        // We can simply call it. The try/catch is no longer necessary here as
+        // the context handles potential errors.
+        await signOut();
+
+        // The user will be redirected by the context/AuthGuard, but we can
+        // still show a toast for immediate feedback.
+        showToast('You have been signed out.', 'success');
+        
+        // This component will unmount, so resetting state isn't strictly necessary,
+        // but it's good practice.
+        setIsSigningOut(false);
+        setDropdownOpen(false);
     };
 
     useEffect(() => {

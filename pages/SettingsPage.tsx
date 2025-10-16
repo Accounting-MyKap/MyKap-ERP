@@ -46,11 +46,15 @@ const SettingsPage: React.FC = () => {
                 phone_number: phoneNumber || null,
             };
     
-            const { error } = await updateProfile(updatedProfileData);
+            const result = await updateProfile(updatedProfileData);
     
-            if (error) {
-                throw error;
+            // FIX: Refactored to check for failure case first. This helps TypeScript's
+            // type narrowing to correctly identify `result` as the error type within
+            // this block, making `result.error` accessible without a compiler error.
+            if (!result.success) {
+                throw new Error(result.error);
             }
+    
             showToast('Profile updated successfully!', 'success');
         } catch (err: any) {
             console.error(err);
