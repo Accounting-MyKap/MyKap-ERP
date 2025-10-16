@@ -129,16 +129,18 @@ const SettingsPage: React.FC = () => {
     
             const result = await updateProfile(updatedProfileData);
     
-            // FIX: Restructured the `if` condition to an if-else block to help TypeScript
-            // correctly narrow the discriminated union type. When `result.success` is false,
-            // the `else` block is entered, and TypeScript correctly infers that `result` must
-            // have an `error` property.
+            // FIX: Restructured to an if/else block. This provides a clearer
+            // control flow for the TypeScript compiler to correctly narrow the type of `result`
+            // and ensure `result.error` is only accessed in the `else` branch where it is guaranteed to exist.
             if (result.success) {
+                // If the code reaches here, `result.success` is true.
                 showToast('Profile updated successfully!', 'success');
-                setHasUnsavedChanges(false); // Reset unsaved changes flag on success
+                setHasUnsavedChanges(false);
             } else {
+                // In this block, `result` is correctly inferred as { success: false; error: string; }
                 throw new Error(result.error);
             }
+
         } catch (err: any) {
             console.error(err);
              // Re-sync form with profile in case of error (AuthContext reverted the optimistic update)
