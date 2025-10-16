@@ -132,7 +132,7 @@ const SettingsPage: React.FC = () => {
             // FIX: Restructured to an if/else block. This provides a clearer
             // control flow for the TypeScript compiler to correctly narrow the type of `result`
             // and ensure `result.error` is only accessed in the `else` branch where it is guaranteed to exist.
-            if (result.success) {
+            if (result.success === true) {
                 // If the code reaches here, `result.success` is true.
                 showToast('Profile updated successfully!', 'success');
                 setHasUnsavedChanges(false);
