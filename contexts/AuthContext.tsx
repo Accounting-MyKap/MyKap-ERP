@@ -124,6 +124,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
         console.log(`%c[Auth State Change] Event: ${_event}`, 'color: #007bff; font-weight: bold;', { session: newSession });
         
+        if (_event === 'TOKEN_REFRESHED') {
+          console.log('%c[Auth] Supabase token successfully refreshed.', 'color: #28a745; font-weight: bold;');
+        }
+
         setSession(newSession);
         const newCurrentUser = newSession?.user ?? null;
         latestUserId.current = newCurrentUser?.id ?? null; // Update ref immediately with the latest user ID.

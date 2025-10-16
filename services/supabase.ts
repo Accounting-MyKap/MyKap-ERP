@@ -25,4 +25,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // The createClient function will throw an error if the URL or key is invalid.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// FIX: Explicitly set auth options to ensure token refresh and session persistence.
+// This resolves the issue where signOut fails after the access token expires.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+});
