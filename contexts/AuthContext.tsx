@@ -124,29 +124,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
         console.log(`%c[Auth State Change] Event: ${_event}`, 'color: #007bff; font-weight: bold;', { session: newSession });
         
-        if (_event === 'TOKEN_REFRESHED') {
-          console.log('%c[Auth] Supabase token successfully refreshed.', 'color: #28a745; font-weight: bold;');
-        }
-
+        // Update session and user state regardless of the event type
         setSession(newSession);
         const newCurrentUser = newSession?.user ?? null;
-        latestUserId.current = newCurrentUser?.id ?? null; // Update ref immediately with the latest user ID.
+        latestUserId.current = newCurrentUser?.id ?? null;
         setUser(newCurrentUser);
 
-        if (newCurrentUser) {
-            const userProfile = await fetchProfile(newCurrentUser);
-            // After await, check if the ref's value still matches the user we fetched for.
-            // This prevents setting a profile if the user has signed out in the meantime.
-            if (latestUserId.current === newCurrentUser.id) {
-                setProfile(userProfile);
-            } else {
-                console.log(`[Auth State Change] Profile fetch for ${newCurrentUser.id} aborted; user has changed.`);
-            }
-        } else {
-            // The declarative AuthGuard component now handles all redirection logic
-            // when the session becomes null. Removing the imperative navigation call
-            // from here resolves the race condition.
-            setProfile(null);
+        switch (_event) {
+            case 'SIGNED_IN':
+            case 'USER_UPDATED':
+                if (newCurrentUser) {
+                    const userProfile = await fetchProfile(newCurrentUser);
+                    if (latestUserId.current === newCurrentUser.id) {
+                        setProfile(userProfile);
+                    }
+                }
+                break;
+            
+            case 'SIGNED_OUT':
+                // Clear the profile state. The session/user are already cleared above.
+                setProfile(null);
+                console.log('%c[Sign Out] Supabase sign out successful, local state cleared via listener.', 'color: #28a745; font-weight: bold;');
+                break;
+            
+            case 'TOKEN_REFRESHED':
+                console.log('%c[Auth] Supabase token successfully refreshed.', 'color: #28a745; font-weight: bold;');
+                // No need to fetch profile again unless user data might change on token refresh.
+                break;
         }
     });
 
@@ -170,14 +174,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Propagate the error to be handled by the UI component that called signOut.
         throw new Error("Sign out failed. Please check your network connection and try again.");
     }
-
-    // On success, we clear the state. `onAuthStateChange` will also fire, but this ensures
-    // the UI reacts instantly without waiting for the listener. The redirect will
-    // be handled declaratively by the AuthGuard.
-    setSession(null);
-    setUser(null);
-    setProfile(null);
-    console.log('[Sign Out] Supabase sign out successful, local state cleared.');
+    // On success, the onAuthStateChange listener will fire with a 'SIGNED_OUT' event.
+    // It is now the single source of truth for clearing the session state,
+    // which resolves the race condition and prevents the app from hanging.
   }, []);
 
   const updateProfile = useCallback(async (updatedProfile: Partial<Profile>): Promise<{ error: { message: string } | null }> => {
