@@ -27,17 +27,18 @@ const RegisterPage: React.FC = () => {
     setIsSubmitting(true);
     setError(null);
     try {
+        // FIX: Switched to the Supabase v2 `signUp` method signature with a single options object.
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                emailRedirectTo: window.location.origin,
                 data: {
                     first_name: firstName,
                     last_name: lastName,
                 }
             }
         });
+
 
         if (error) {
             throw error;

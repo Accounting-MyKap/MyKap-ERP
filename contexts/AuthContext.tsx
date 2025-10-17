@@ -1,7 +1,9 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
+// FIX: The user's version of '@supabase/supabase-js' does export Session or User with the correct v2 setup.
 import { Session, User } from '@supabase/supabase-js';
+
 
 // Define the profile type
 interface Profile {
@@ -214,10 +216,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (_event, newSession) => {
             if (!isMounted.current) return;
-
-            if (import.meta.env.DEV) {
-              console.log(`%c[Auth State Change] Event: ${_event}`, 'color: #007bff; font-weight: bold;');
-            }
             
             // Update session and user state regardless of the event type
             setSession(newSession);
@@ -246,9 +244,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     break;
                 
                 case 'TOKEN_REFRESHED':
-                    if (import.meta.env.DEV) {
-                        console.log('%c[Auth] Token successfully refreshed.', 'color: #28a745; font-weight: bold;');
-                    }
+                    // This is now handled by the logger in supabase.ts
                     break;
             }
         });
@@ -256,6 +252,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         authSubscription = subscription;
 
         // Step 2: Get the initial session AFTER listener is set up
+        // FIX: Reverted to the async `getSession()` (v2) from `session()` (v1).
         const { data: { session: initialSession } } = await supabase.auth.getSession();
 
         if (!isMounted.current) return;
@@ -312,10 +309,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   const signOut = useCallback(async () => {
-    if (import.meta.env.DEV) {
-      console.log('%c[Sign Out] Initiating sign out...', 'color: #dc3545; font-weight: bold;');
-    }
-    
     const { error } = await supabase.auth.signOut();
 
     if (error) {
