@@ -24,6 +24,10 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
     const { showToast } = useToast();
     const isProspectStage = loan.status === 'in_progress';
 
+    // CRITICAL FIX: The dependency array is now just [loan.id].
+    // This effect now ONLY syncs the form state when the user selects a DIFFERENT loan/prospect.
+    // This breaks the re-render cycle during a save operation, preventing the infinite loop and
+    // ensuring local form state is not wiped out unexpectedly by an optimistic update elsewhere.
      useEffect(() => {
         setLoanAmount(loan.loan_amount);
         const terms = loan.terms || {};
@@ -34,7 +38,7 @@ const TermsSection: React.FC<TermsSectionProps> = ({ loan, onUpdate }) => {
         setMonthlyPayment(terms.monthly_payment);
         setClosingDate(terms.closing_date);
         setMaturityDate(terms.maturity_date);
-    }, [loan.id, loan.loan_amount, loan.terms]);
+    }, [loan.id]);
 
     const handleSave = async () => {
         setIsSaving(true);

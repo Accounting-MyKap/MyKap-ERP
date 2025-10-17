@@ -23,6 +23,9 @@ const SettingsPage: React.FC = () => {
 
 
     // Sync form with profile (only when not saving to prevent conflicts)
+    // PREVENTIVE FIX: Changed dependency from `[profile, isSaving]` to `[profile?.id, isSaving]`.
+    // This makes the effect robust by depending on the stable primitive ID instead of the object
+    // reference, preventing accidental re-syncs during unrelated profile object updates.
     useEffect(() => {
         if (profile && !isSaving) {
             setFirstName(profile.first_name || '');
@@ -32,7 +35,7 @@ const SettingsPage: React.FC = () => {
             setPhoneNumber(profile.phone_number || '');
             setErrors({}); // Clear errors on re-sync
         }
-    }, [profile, isSaving]);
+    }, [profile?.id, isSaving]);
 
     // Track unsaved changes
     useEffect(() => {
