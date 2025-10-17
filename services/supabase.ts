@@ -36,6 +36,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce', // Use PKCE flow for better security
+    storage: window.localStorage, // Explicitly use localStorage for session persistence
+    storageKey: 'sb-mykap-erp-auth-token', // Custom key for the session
     debug: import.meta.env.DEV, // Enable auth debugging in development
   },
   global: {
