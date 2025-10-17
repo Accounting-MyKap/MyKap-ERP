@@ -173,6 +173,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
                 onSave={handleUpdateFunder}
                 funder={editingFunder}
                 lenders={lenders}
+                loan={loan}
             />
 
         </div>

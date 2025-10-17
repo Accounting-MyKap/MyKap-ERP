@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
-import { Funder, Lender, ServicingFees } from '../../prospects/types';
+import { Funder, Lender, ServicingFees, Prospect } from '../../prospects/types';
 import { formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface EditFunderModalProps {
@@ -9,16 +9,23 @@ interface EditFunderModalProps {
     onSave: (funder: Funder) => void;
     funder: Funder | null;
     lenders: Lender[];
+    loan: Prospect;
 }
 
-const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSave, funder, lenders }) => {
-    const [formData, setFormData] = useState<Partial<ServicingFees & { broker_servicing_fee_percent_display: number | string }>>({});
+type EditFunderFormData = Partial<ServicingFees> & {
+    broker_servicing_fee_percent_display?: number | string;
+    lender_rate_display?: number | string;
+};
+
+const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSave, funder, lenders, loan }) => {
+    const [formData, setFormData] = useState<EditFunderFormData>({});
 
     const lenderDetails = lenders.find(l => l.id === funder?.lender_id);
 
     useEffect(() => {
         if (funder) {
             setFormData({
+                lender_rate_display: (funder.lender_rate ?? 0) * 100,
                 rounding_adjustment: funder.servicing_fees?.rounding_adjustment ?? false,
                 broker_servicing_fee_enabled: funder.servicing_fees?.broker_servicing_fee_enabled ?? false,
                 broker_servicing_fee_percent_display: (funder.servicing_fees?.broker_servicing_fee_percent ?? 0) * 100,
@@ -31,12 +38,26 @@ const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSa
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
         
+        const isCheckbox = type === 'checkbox';
+        const isBrokerFeeCheckbox = name === 'broker_servicing_fee_enabled';
+        const newFormData = { ...formData, [name]: isCheckbox ? checked : value };
+
         if (['broker_servicing_fee_plus_amount', 'broker_servicing_fee_minimum'].includes(name)) {
             const parsed = parseCurrency(value);
             setFormData(prev => ({ ...prev, [name]: parsed }));
         } else {
-            const val = type === 'checkbox' ? checked : value;
-            setFormData(prev => ({ ...prev, [name]: val }));
+            setFormData(prev => ({...prev, [name]: isCheckbox ? checked : value}));
+        }
+
+        if (isBrokerFeeCheckbox && checked) {
+            // Auto-calculate servicing fee when checkbox is enabled
+            const loanNoteRate = (loan.terms?.note_rate ?? 0) * 100;
+            const lenderRate = parseFloat(String(newFormData.lender_rate_display)) || 0;
+            const calculatedFee = loanNoteRate - lenderRate;
+            setFormData(prev => ({
+                ...prev,
+                broker_servicing_fee_percent_display: String(calculatedFee > 0 ? calculatedFee.toFixed(3) : 0)
+            }));
         }
     };
 
@@ -45,6 +66,7 @@ const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSa
 
         const updatedFunder: Funder = {
             ...funder,
+            lender_rate: (parseFloat(String(formData.lender_rate_display)) || 0) / 100,
             servicing_fees: {
                 ...funder.servicing_fees,
                 rounding_adjustment: formData.rounding_adjustment,
@@ -91,68 +113,47 @@ const EditFunderModal: React.FC<EditFunderModalProps> = ({ isOpen, onClose, onSa
                     </div>
                 </div>
 
-                {/* Servicing Fees Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 border-t pt-4">
+                {/* Financials & Servicing Fees Section */}
+                <div className="space-y-4 border-t pt-4">
+                    {/* Lender Rate */}
+                    <div>
+                        <label htmlFor="lender_rate_display" className="block text-sm font-medium text-gray-700 mb-1">Lender Rate</label>
+                        <div className="input-container max-w-xs">
+                            <input type="number" step="0.01" id="lender_rate_display" name="lender_rate_display" value={formData.lender_rate_display || ''} onChange={handleChange} className="input-field input-field-with-adornment-right text-right" />
+                            <span className="input-adornment-right">%</span>
+                        </div>
+                    </div>
                     {/* Broker Servicing Fee */}
-                    <div className="space-y-3">
+                    <div className="space-y-3 pt-4 border-t">
                         <div className="flex items-center">
                             <input type="checkbox" name="broker_servicing_fee_enabled" id="broker_servicing_fee_enabled" checked={!!formData.broker_servicing_fee_enabled} onChange={handleChange} className="h-4 w-4 text-blue-600 rounded mr-2" />
                             <label htmlFor="broker_servicing_fee_enabled" className="text-md font-semibold text-gray-800">Broker Servicing Fee</label>
                         </div>
-                        <div>
-                            <label htmlFor="broker_servicing_fee_percent_display" className="block text-sm font-medium text-gray-700 mb-1">% of Principal Bal</label>
-                            <div className="input-container">
-                                <input type="number" step="0.001" name="broker_servicing_fee_percent_display" id="broker_servicing_fee_percent_display" value={formData.broker_servicing_fee_percent_display || ''} onChange={handleChange} className="input-field text-right pr-10" />
-                                <span className="input-adornment-right">%</span>
+                        {formData.broker_servicing_fee_enabled && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
+                                <div>
+                                    <label htmlFor="broker_servicing_fee_percent_display" className="block text-sm font-medium text-gray-700 mb-1">% of Principal Bal</label>
+                                    <div className="input-container">
+                                        <input type="number" step="0.001" name="broker_servicing_fee_percent_display" id="broker_servicing_fee_percent_display" value={formData.broker_servicing_fee_percent_display || ''} onChange={handleChange} className="input-field text-right pr-10" />
+                                        <span className="input-adornment-right">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="broker_servicing_fee_plus_amount" className="block text-sm font-medium text-gray-700 mb-1">Plus Amount</label>
+                                    <div className="input-container">
+                                        <span className="input-adornment">$</span>
+                                        <input type="text" inputMode="decimal" name="broker_servicing_fee_plus_amount" id="broker_servicing_fee_plus_amount" value={formatNumber(formData.broker_servicing_fee_plus_amount)} onChange={handleChange} className="input-field pl-7 text-right" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="broker_servicing_fee_minimum" className="block text-sm font-medium text-gray-700 mb-1">Or Minimum</label>
+                                    <div className="input-container">
+                                        <span className="input-adornment">$</span>
+                                        <input type="text" inputMode="decimal" name="broker_servicing_fee_minimum" id="broker_servicing_fee_minimum" value={formatNumber(formData.broker_servicing_fee_minimum)} onChange={handleChange} className="input-field pl-7 text-right" />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div>
-                            <label htmlFor="broker_servicing_fee_plus_amount" className="block text-sm font-medium text-gray-700 mb-1">Plus Amount</label>
-                            <div className="input-container">
-                                <span className="input-adornment">$</span>
-                                <input type="text" inputMode="decimal" name="broker_servicing_fee_plus_amount" id="broker_servicing_fee_plus_amount" value={formatNumber(formData.broker_servicing_fee_plus_amount)} onChange={handleChange} className="input-field pl-7 text-right" />
-                            </div>
-                        </div>
-                        <div>
-                            <label htmlFor="broker_servicing_fee_minimum" className="block text-sm font-medium text-gray-700 mb-1">Or Minimum</label>
-                            <div className="input-container">
-                                <span className="input-adornment">$</span>
-                                <input type="text" inputMode="decimal" name="broker_servicing_fee_minimum" id="broker_servicing_fee_minimum" value={formatNumber(formData.broker_servicing_fee_minimum)} onChange={handleChange} className="input-field pl-7 text-right" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Vendor Servicing Fee (disabled placeholder) */}
-                    <div className="space-y-3 opacity-50">
-                         <div className="flex items-center">
-                            <input type="checkbox" disabled className="h-4 w-4 rounded mr-2" />
-                            <label className="text-md font-semibold text-gray-800">Vendor Servicing Fee</label>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">% of Principal Bal</label>
-                            <div className="input-container">
-                                <input type="text" disabled defaultValue="0.000" className="input-field bg-gray-100 text-right pr-10" />
-                                 <span className="input-adornment-right">%</span>
-                            </div>
-                        </div>
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Plus Amount</label>
-                            <div className="input-container">
-                                <span className="input-adornment">$</span>
-                                <input type="text" disabled defaultValue="0.00" className="input-field bg-gray-100 pl-7 text-right" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Or Minimum</label>
-                            <div className="input-container">
-                                <span className="input-adornment">$</span>
-                                <input type="text" disabled defaultValue="0.00" className="input-field bg-gray-100 pl-7 text-right" />
-                            </div>
-                        </div>
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Account</label>
-                            <input type="text" disabled className="input-field bg-gray-100" />
-                        </div>
+                        )}
                     </div>
                 </div>
 

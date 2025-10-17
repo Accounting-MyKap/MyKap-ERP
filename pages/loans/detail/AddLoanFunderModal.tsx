@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import { Lender, Funder } from '../../prospects/types';
-import { formatNumber, parseCurrency } from '../../../utils/formatters';
 
 interface AddLoanFunderModalProps {
     isOpen: boolean;
@@ -13,10 +12,15 @@ interface AddLoanFunderModalProps {
 
 const AddLoanFunderModal: React.FC<AddLoanFunderModalProps> = ({ isOpen, onClose, onSave, lenders, existingFunderIds }) => {
     const [selectedLenderId, setSelectedLenderId] = useState('');
-    const [originalAmount, setOriginalAmount] = useState(0);
-    const [lenderRate, setLenderRate] = useState(0);
 
     const availableLenders = lenders.filter(l => !existingFunderIds.includes(l.id));
+
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedLenderId('');
+        }
+    }, [isOpen]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,8 +32,8 @@ const AddLoanFunderModal: React.FC<AddLoanFunderModalProps> = ({ isOpen, onClose
             lender_id: selectedLender.id,
             lender_account: selectedLender.account,
             lender_name: selectedLender.lender_name,
-            original_amount: originalAmount,
-            lender_rate: lenderRate / 100, // Convert percentage to decimal
+            original_amount: 0,
+            lender_rate: 0,
             principal_balance: 0, // Initially 0, funded via events
             pct_owned: 0, // This will be calculated based on funding
         };
@@ -48,26 +52,6 @@ const AddLoanFunderModal: React.FC<AddLoanFunderModalProps> = ({ isOpen, onClose
                             <option key={lender.id} value={lender.id}>{lender.lender_name} ({lender.account})</option>
                         ))}
                     </select>
-                </div>
-                <div>
-                    <label htmlFor="originalAmount" className="block text-sm font-medium text-gray-700">Original Amount</label>
-                    <div className="input-container mt-1">
-                        <span className="input-adornment">$</span>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            id="originalAmount"
-                            value={formatNumber(originalAmount)}
-                            onChange={e => setOriginalAmount(parseCurrency(e.target.value))}
-                            className="input-field input-field-with-adornment-left text-right" />
-                    </div>
-                </div>
-                <div>
-                    <label htmlFor="lenderRate" className="block text-sm font-medium text-gray-700">Lender Rate</label>
-                    <div className="input-container mt-1">
-                        <input type="number" step="0.01" id="lenderRate" value={lenderRate} onChange={e => setLenderRate(parseFloat(e.target.value) || 0)} className="input-field input-field-with-adornment-right text-right" />
-                        <span className="input-adornment-right">%</span>
-                    </div>
                 </div>
 
                 <div className="pt-4 flex justify-end space-x-3">
