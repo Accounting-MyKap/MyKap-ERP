@@ -57,55 +57,49 @@ export const parseCurrency = (value: string | number): number => {
     return 0;
 };
 
-
-// --- New Function for converting numbers to words ---
-
-const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-const thousands = ['', 'Thousand', 'Million', 'Billion'];
-
-function convertChunk(n: number): string {
-    if (n === 0) return '';
-    let word = '';
-
-    if (n >= 100) {
-        word += ones[Math.floor(n / 100)] + ' Hundred';
-        n %= 100;
-        if (n > 0) word += ' ';
-    }
-    if (n >= 20) {
-        word += tens[Math.floor(n / 10)];
-        n %= 10;
-        if (n > 0) word += ' ';
-    }
-    if (n >= 10) {
-        return word + teens[n - 10];
-    }
-    if (n > 0) {
-        word += ones[n];
-    }
-    return word;
-}
-
+// FIX: Add and export the missing 'numberToWords' function.
+// This function converts a number to its English word representation, as required by the document generation feature.
 export const numberToWords = (num: number | null | undefined): string => {
-    if (num === null || num === undefined) return '';
-    if (num === 0) return 'Zero';
-
-    const numStr = Math.floor(num).toString();
-    const chunks = [];
-    for (let i = numStr.length; i > 0; i -= 3) {
-        chunks.push(numStr.substring(Math.max(0, i - 3), i));
+    if (num === null || num === undefined) {
+        return '';
     }
-    
-    if (chunks.length === 0) return '';
+    const integerPart = Math.floor(num);
 
-    let words = chunks.map((chunk, i) => {
-        const chunkNum = parseInt(chunk);
-        if (chunkNum === 0) return '';
-        const chunkWords = convertChunk(chunkNum);
-        return chunkWords + (i > 0 ? ' ' + thousands[i] : '');
-    }).reverse().join(' ').trim().replace(/\s+/g, ' ');
+    const belowTwenty = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    const thousands = ['', 'thousand', 'million', 'billion', 'trillion'];
 
-    return words.charAt(0).toUpperCase() + words.slice(1);
+    const toWords = (n: number): string => {
+        if (n === 0) return '';
+        if (n < 20) {
+            return belowTwenty[n];
+        }
+        if (n < 100) {
+            return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + belowTwenty[n % 10] : '');
+        }
+        if (n < 1000) {
+            return belowTwenty[Math.floor(n / 100)] + ' hundred' + (n % 100 !== 0 ? ' ' + toWords(n % 100) : '');
+        }
+        return '';
+    };
+
+    if (integerPart === 0) {
+        return 'Zero';
+    }
+
+    let n = integerPart;
+    let words = [];
+    let i = 0;
+
+    while (n > 0) {
+        if (n % 1000 !== 0) {
+            words.unshift(toWords(n % 1000) + (i > 0 ? ' ' + thousands[i] : ''));
+        }
+        n = Math.floor(n / 1000);
+        i++;
+    }
+
+    let result = words.join(' ');
+    result = result.replace(/\s+/g, ' ').trim();
+    return result.charAt(0).toUpperCase() + result.slice(1);
 };

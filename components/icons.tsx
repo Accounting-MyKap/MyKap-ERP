@@ -108,11 +108,6 @@ export const DocumentsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
   <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></Icon>
 );
 
-export const GenerateDocsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12.188l-1.621-1.621a1.125 1.125 0 011.591-1.591l1.621 1.621 1.621-1.621a1.125 1.125 0 011.591 1.591l-1.621 1.621m-1.5-1.5l1.5 1.5m0 0l-1.5 1.5m-1.5-1.5l1.5 1.5M3 12a9 9 0 1118 0 9 9 0 01-18 0z" /></Icon>
-);
-
-
 export const FundingIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V6.375c0-.621.504-1.125 1.125-1.125h.375m18 3.75v.75a.75.75 0 01-.75.75h-.75a.75.75 0 01-.75-.75v-.75m0 0h.375c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125h-.375m-1.5-3h.75a.75.75 0 00.75-.75v-.75a.75.75 0 00-.75-.75h-.75m-6 3.75v.75a.75.75 0 01-.75.75h-.75a.75.75 0 01-.75-.75v-.75m0 0h.375c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125h-.375m-1.5-3h.75a.75.75 0 00.75-.75v-.75a.75.75 0 00-.75-.75h-.75" /></Icon>
 );
@@ -128,11 +123,6 @@ export const HistoryIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 export const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm6 0h-2v-1a6 6 0 00-9-5.197M15 12a4 4 0 110 5.292" /></Icon>
 );
-
-export const TemplateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></Icon>
-);
-
 
 export const DollarCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></Icon>

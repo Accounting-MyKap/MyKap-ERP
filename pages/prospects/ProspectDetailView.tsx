@@ -6,9 +6,8 @@ import StagesSection from './detail/sections/StagesSection';
 import CoBorrowersSection from '../loans/detail/sections/CoBorrowersSection';
 import PropertiesSection from '../loans/detail/sections/PropertiesSection';
 import TermsSection from '../loans/detail/sections/TermsSection';
-import GenerateDocumentModal from './components/GenerateDocumentModal';
 import EditProspectModal from './components/EditProspectModal';
-import { ReopenIcon, GenerateDocsIcon, EditIcon } from '../../components/icons';
+import { ReopenIcon, EditIcon } from '../../components/icons';
 
 interface ProspectDetailViewProps {
     prospect: Prospect | null;
@@ -31,7 +30,6 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = (props) => {
     const { prospect, onRejectProspect, onReopenProspect, onUpdateProspect } = props;
     const [activeSection, setActiveSection] = useState<Section>('stages');
     const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
-    const [isGenerateDocsModalOpen, setGenerateDocsModalOpen] = useState(false);
     const [isEditModalOpen, setEditModalOpen] = useState(false);
 
     if (!prospect) {
@@ -88,11 +86,6 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = (props) => {
                                 className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 px-3 py-2 rounded-md">
                                 <EditIcon className="h-4 w-4 mr-2" /> Edit Prospect
                             </button>
-                             <button 
-                                onClick={() => setGenerateDocsModalOpen(true)}
-                                className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 px-3 py-2 rounded-md">
-                                <GenerateDocsIcon className="h-4 w-4 mr-2" /> Generate Docs
-                            </button>
                             <button 
                                 onClick={() => onRejectProspect(prospect.id, currentStage.id)}
                                 disabled={status === 'completed'}
@@ -127,11 +120,6 @@ const ProspectDetailView: React.FC<ProspectDetailViewProps> = (props) => {
                 </div>
             </div>
 
-            <GenerateDocumentModal 
-                isOpen={isGenerateDocsModalOpen}
-                onClose={() => setGenerateDocsModalOpen(false)}
-                prospect={prospect}
-            />
             <EditProspectModal
                 isOpen={isEditModalOpen}
                 onClose={() => setEditModalOpen(false)}

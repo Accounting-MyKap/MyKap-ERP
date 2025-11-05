@@ -15,8 +15,6 @@ import LenderDetailPage from './pages/lenders/detail/LenderDetailPage';
 import UsersPage from './pages/users/UsersPage';
 import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ui/ToastContainer';
-import { TemplatesProvider } from './contexts/TemplatesContext';
-import TemplatesPage from './pages/templates/TemplatesPage';
 import { LendersProvider } from './contexts/LendersContext';
 import { UsersProvider } from './contexts/UsersContext';
 
@@ -25,13 +23,11 @@ import { UsersProvider } from './contexts/UsersContext';
 const ProtectedLayout: React.FC = () => {
   return (
     <ProspectsProvider>
-      <TemplatesProvider>
-        <LendersProvider>
-          <UsersProvider>
-            <Outlet />
-          </UsersProvider>
-        </LendersProvider>
-      </TemplatesProvider>
+      <LendersProvider>
+        <UsersProvider>
+          <Outlet />
+        </UsersProvider>
+      </LendersProvider>
     </ProspectsProvider>
   );
 };
@@ -79,7 +75,6 @@ const App: React.FC = () => {
                 <Route path="/lenders/:lenderId" element={<LenderDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/users" element={<UsersPage />} />
-                <Route path="/templates" element={<TemplatesPage />} />
                 {/* Redirect root to dashboard if logged in */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
               </Route>
