@@ -283,17 +283,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initializeAuth();
 
-    // Set up BroadcastChannel for multi-tab sync
-    const authChannel = new BroadcastChannel('auth_channel');
-    authChannel.onmessage = (event) => {
-      if (event.data.type === 'SIGN_OUT' && isMounted.current) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        navigate('/login', { replace: true });
-      }
-    };
-
     // Cleanup function
     return () => {
       isMounted.current = false;
@@ -303,7 +292,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         authSubscription.unsubscribe();
       }
-      authChannel.close();
     };
   }, [navigate]);
 
@@ -315,20 +303,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('[Sign Out] Supabase sign out failed:', error);
         throw new Error("Sign out failed. Please check your network connection and try again.");
     }
-
-    // Notify other tabs about sign out
-    try {
-      const channel = new BroadcastChannel('auth_channel');
-      channel.postMessage({ type: 'SIGN_OUT' });
-      channel.close();
-    } catch (error) {
-      console.error('[Sign Out] Failed to broadcast sign out to other tabs:', error);
-    }
     
-    // Navigate to login page
+    // Navigate to login page. The onAuthStateChange listener will handle clearing the session state.
     navigate('/login', { replace: true });
     
-    // The onAuthStateChange listener will handle clearing the session state
   }, [navigate]);
 
   const updateProfile = useCallback(async (
