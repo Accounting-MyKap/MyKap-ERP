@@ -1,3 +1,5 @@
+// contexts/AuthContext.tsx
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
@@ -51,11 +53,10 @@ const validateRole = (role: unknown): Role | null => {
 // Validate profile data structure
 const validateProfile = (data: any): Profile | null => {
     if (!data || typeof data !== 'object') {
-        console.error('[Profile Validation] Invalid profile data structure');
+        console.error('[Profile Validation] Invalid data structure');
         return null;
     }
 
-    // Validate required fields
     if (!data.id || typeof data.id !== 'string') {
         console.error('[Profile Validation] Missing or invalid id');
         return null;
@@ -63,12 +64,12 @@ const validateProfile = (data: any): Profile | null => {
 
     return {
         id: data.id,
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        email: data.email || null,
-        middle_name: data.middle_name || null,
-        second_surname: data.second_surname || null,
-        phone_number: data.phone_number || null,
+        first_name: typeof data.first_name === 'string' ? data.first_name : '',
+        last_name: typeof data.last_name === 'string' ? data.last_name : '',
+        email: typeof data.email === 'string' ? data.email : null,
+        middle_name: typeof data.middle_name === 'string' ? data.middle_name : null,
+        second_surname: typeof data.second_surname === 'string' ? data.second_surname : null,
+        phone_number: typeof data.phone_number === 'string' ? data.phone_number : null,
         role: validateRole(data.role),
     };
 };
@@ -92,7 +93,9 @@ const fetchProfile = async (
             if (error) {
                 // If the profile does not exist (PostgREST error code for "0 rows returned"), attempt to create it.
                 if (error.code === 'PGRST116') {
-                    console.warn(`[Profile Sync] No profile found for user ${user.id}. Attempting to create one.`);
+                    if (import.meta.env.DEV) {
+                        console.warn(`[Profile Sync] No profile found for user ${user.id}. Attempting to create one.`);
+                    }
                     
                     const { data: newProfile, error: createError } = await supabase
                         .from('profiles')
@@ -109,7 +112,9 @@ const fetchProfile = async (
                         console.error('[Profile Sync] Failed to auto-create profile:', createError.message);
                         
                         // Create a minimal profile in memory as fallback
-                        console.warn('[Profile Sync] Using in-memory fallback profile');
+                        if (import.meta.env.DEV) {
+                            console.warn('[Profile Sync] Using in-memory fallback profile');
+                        }
                         return {
                             id: user.id,
                             email: user.email,
@@ -149,24 +154,8 @@ const fetchProfile = async (
                 if (updateError) {
                     console.error('[Profile Sync] Error syncing profile email:', updateError.message);
                     
-                    // Retry once for email sync
-                    const { data: retryData, error: retryError } = await supabase
-                        .from('profiles')
-                        .update({ email: user.email })
-                        .eq('id', user.id)
-                        .select()
-                        .single();
-                    
-                    if (retryError) {
-                        console.error('[Profile Sync] Email sync retry failed:', retryError.message);
-                        // Return profile with corrected email in-memory
-                        return validateProfile({ ...profileData, email: user.email });
-                    }
-                    
-                    if (import.meta.env.DEV) {
-                        console.log('[Profile Sync] Email sync successful on retry.');
-                    }
-                    return validateProfile(retryData);
+                    // Return profile with corrected email in-memory
+                    return validateProfile({ ...profileData, email: user.email });
                 }
                 
                 if (import.meta.env.DEV) {
@@ -199,6 +188,7 @@ const fetchProfile = async (
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -206,13 +196,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const latestUserId = useRef<string | null>(null);
   const isMounted = useRef(true);
 
+  // Keep navigateRef fresh to avoid stale closures in listeners
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+
   useEffect(() => {
     isMounted.current = true;
     let authSubscription: { unsubscribe: () => void } | null = null;
 
     const initializeAuth = async () => {
       try {
-        // Step 1: Set up the auth state listener FIRST
+        // Step 1: Get initial session to prevent race conditions
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+
+        if (!isMounted.current) return;
+
+        setSession(initialSession);
+        const currentUser = initialSession?.user ?? null;
+        latestUserId.current = currentUser?.id ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          const userProfile = await fetchProfile(currentUser);
+          if (latestUserId.current === currentUser.id && isMounted.current) {
+            setProfile(userProfile);
+          }
+        }
+        
+        // Step 2: Set up listener AFTER initial state is ready
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (_event, newSession) => {
             if (!isMounted.current) return;
@@ -237,8 +249,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 case 'SIGNED_OUT':
                     if (isMounted.current) {
                         setProfile(null);
+                        // CRITICAL FIX: Navigate to login when signed out from another tab
+                        navigateRef.current('/login', { replace: true });
                         if (import.meta.env.DEV) {
-                            console.log('%c[Sign Out] Local state cleared via listener.', 'color: #28a745; font-weight: bold;');
+                            console.log('%c[Sign Out] Redirected to login via listener.', 'color: #28a745; font-weight: bold;');
                         }
                     }
                     break;
@@ -250,24 +264,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         authSubscription = subscription;
-
-        // Step 2: Get the initial session AFTER listener is set up
-        // FIX: Reverted to the async `getSession()` (v2) from `session()` (v1).
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-
-        if (!isMounted.current) return;
-
-        setSession(initialSession);
-        const currentUser = initialSession?.user ?? null;
-        latestUserId.current = currentUser?.id ?? null;
-        setUser(currentUser);
-        
-        if (currentUser) {
-          const userProfile = await fetchProfile(currentUser);
-          if (latestUserId.current === currentUser.id && isMounted.current) {
-            setProfile(userProfile);
-          }
-        }
         
         if (isMounted.current) {
           setLoading(false);
@@ -293,21 +289,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         authSubscription.unsubscribe();
       }
     };
-  }, []);
+  }, []); // Empty deps are now safe because of navigateRef
 
 
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        
+        // The onAuthStateChange listener will handle state cleanup and redirection.
+        if (import.meta.env.DEV) {
+            console.log('[Sign Out] Supabase signOut successful.');
+        }
+    } catch (error: any) {
         console.error('[Sign Out] Supabase sign out failed:', error);
+        
+        // CRITICAL FIX: Force local cleanup even if server call fails
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        navigateRef.current('/login', { replace: true });
+        
+        // Re-throw to let UI components show an error toast
         throw new Error("Sign out failed. Please check your network connection and try again.");
     }
-    
-    // Navigate to login page. The onAuthStateChange listener will handle clearing the session state.
-    navigate('/login', { replace: true });
-    
-  }, [navigate]);
+  }, []); // No deps needed, uses refs
 
   const updateProfile = useCallback(async (
     updatedProfile: Partial<Profile>
