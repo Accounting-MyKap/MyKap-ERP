@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Prospect, Funder } from '../../../prospects/types';
+import { Prospect, Funder, HistoryEvent } from '../../../prospects/types';
 import { useLenders } from '../../../../hooks/useLenders';
 import AddLoanFunderModal from '../AddLoanFunderModal';
 import AddFundingEventModal from '../AddFundingEventModal';
@@ -45,7 +45,7 @@ const FundingSection: React.FC<FundingSectionProps> = ({ loan, onUpdate, onRecor
         let updatedFunders = [...funders];
 
         // Create the history event
-        const newHistoryEvent = {
+        const newHistoryEvent: HistoryEvent = {
             id: `hist-${crypto.randomUUID()}`,
             date_created: new Date().toISOString().split('T')[0],
             date_received: data.fundingDate,

@@ -45,20 +45,25 @@ const LoanDetailPage: React.FC = () => {
             // Correctly deduct from lender trust balance when a new funding event occurs
             const oldHistory = loan.history || [];
             const newHistory = updatedData.history || [];
+
+            // Check if a new funding event was added
             if (newHistory.length > oldHistory.length) {
-                const newEvent = newHistory[newHistory.length - 1];
-                if (newEvent.type === 'Funding' && newEvent.distributions) {
-                    newEvent.distributions.forEach(dist => {
-                        const funder = loan.funders?.find(f => f.id === dist.funderId);
-                        if (funder) {
-                            // FIX: Changed 'date' property to 'event_date' to match TrustAccountEvent type.
-                            withdrawFromLenderTrust(funder.lender_id, {
+                const newEvent = newHistory.find(h => !oldHistory.some(oh => oh.id === h.id));
+                if (newEvent && newEvent.type === 'Funding' && newEvent.distributions) {
+                    // Create a corresponding trust account event for each funder
+                    for (const dist of newEvent.distributions) {
+                         const funder = loan.funders?.find(f => f.id === dist.funderId);
+                         if (funder) {
+                            await withdrawFromLenderTrust(funder.lender_id, {
                                 event_date: newEvent.date_received,
                                 amount: dist.amount,
-                                description: `Funding for loan ${loan.prospect_code}`
+                                description: `Funding for loan: ${loan.prospect_code}`,
+                                event_type: 'Funding Disbursement',
+                                related_loan_id: loan.id,
+                                related_loan_code: loan.prospect_code || undefined,
                             });
                         }
-                    });
+                    }
                 }
             }
             // The component will automatically re-render with the updated data from the context.
@@ -77,9 +82,17 @@ const LoanDetailPage: React.FC = () => {
             distributions: paymentData.distributions,
         });
 
+        // For each distribution, create a corresponding deposit event in the lender's trust account.
         paymentData.distributions.forEach(dist => {
             if (dist.amount > 0) {
-                 addFundsToLenderTrust(dist.lender_id, dist.amount, `Payment distribution from loan ${loan.prospect_code}`);
+                 addFundsToLenderTrust(dist.lender_id, {
+                    event_date: paymentData.date,
+                    amount: dist.amount,
+                    description: `Payment distribution from loan: ${loan.prospect_code}`,
+                    event_type: 'Payment Receipt',
+                    related_loan_id: loan.id,
+                    related_loan_code: loan.prospect_code || undefined,
+                 });
             }
         });
 
@@ -104,11 +117,13 @@ const LoanDetailPage: React.FC = () => {
                         funder.principal_balance += dist.amount;
                         const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
                         if(lenderToUpdate) {
-                            // FIX: Changed 'date' property to 'event_date' to match TrustAccountEvent type.
                             withdrawFromLenderTrust(lenderToUpdate.lender_id, {
                                 event_date: eventToDelete.date_received,
                                 amount: dist.amount,
-                                description: `Reversal of payment for loan ${loan.prospect_code}`
+                                description: `Reversal of payment from loan: ${loan.prospect_code}`,
+                                event_type: 'Payment Reversal',
+                                related_loan_id: loan.id,
+                                related_loan_code: loan.prospect_code || undefined,
                             });
                         }
                     }
@@ -123,7 +138,14 @@ const LoanDetailPage: React.FC = () => {
                         funder.principal_balance -= dist.amount;
                         const lenderToUpdate = loan.funders?.find(f => f.id === dist.funderId);
                         if(lenderToUpdate) {
-                            addFundsToLenderTrust(lenderToUpdate.lender_id, dist.amount, `Reversal of funding for loan ${loan.prospect_code}`);
+                             addFundsToLenderTrust(lenderToUpdate.lender_id, {
+                                event_date: eventToDelete.date_received,
+                                amount: dist.amount,
+                                description: `Reversal of funding for loan: ${loan.prospect_code}`,
+                                event_type: 'Funding Reversal',
+                                related_loan_id: loan.id,
+                                related_loan_code: loan.prospect_code || undefined,
+                             });
                         }
                     }
                 });

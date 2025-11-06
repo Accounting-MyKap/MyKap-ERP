@@ -6,12 +6,11 @@ import { formatNumber, parseCurrency } from '../../../utils/formatters';
 interface AddDepositModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (event: Omit<TrustAccountEvent, 'id'>) => void;
+    onSave: (event: Omit<TrustAccountEvent, 'id' | 'event_type'>) => void;
 }
 
 const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSave }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [type, setType] = useState<'deposit' | 'withdrawal'>('deposit');
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState(0);
 
@@ -19,14 +18,12 @@ const AddDepositModal: React.FC<AddDepositModalProps> = ({ isOpen, onClose, onSa
         e.preventDefault();
         onSave({
             event_date: date,
-            event_type: type,
             description,
             amount,
         });
         onClose();
         // Reset form
         setDate(new Date().toISOString().split('T')[0]);
-        setType('deposit');
         setDescription('');
         setAmount(0);
     };

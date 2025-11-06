@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useCallback, ReactNode } fro
 import { Prospect, UserProfile, DocumentStatus, ApplicantType, Stage, Document, ClosingDocStatusKey, Funder, HistoryEvent, PropertyPhoto } from '../pages/prospects/types';
 import { supabase } from '../services/supabase';
 import { generateNewProspect } from '../pages/prospects/prospectUtils';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Checks if all documents in the current stage of a prospect are approved.
@@ -75,7 +76,8 @@ const checkAndAdvanceStage = (prospect: Prospect): Prospect => {
             date_received: closingDate,
             type: 'Funding',
             total_amount: loanAmount,
-            notes: 'Initial loan funding by originator.'
+            notes: 'Initial loan funding by originator.',
+            distributions: [{ funderId: originatorFunder.id, amount: loanAmount }]
         };
 
         return {
@@ -134,6 +136,7 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [prospects, setProspects] = useState<Prospect[]>([]);
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
+    const { profile } = useAuth();
 
     const fetchProspects = useCallback(async () => {
         const { data, error } = await supabase
@@ -181,17 +184,31 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
     const updateProspectData = useCallback(async (prospectId: string, updatePayload: Partial<Prospect>) => {
         console.log(`%c[LOG 4 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'updateProspectData called.', { prospectId, updatePayload });
 
+        const originalProspect = prospects.find(p => p.id === prospectId);
+        if (!originalProspect) {
+            throw new Error(`[updateProspect] Prospect with ID ${prospectId} not found.`);
+        }
+
+        // Inject user info into any new history events before updating state
+        if (updatePayload.history && profile) {
+            const originalHistoryLength = originalProspect.history?.length || 0;
+            if (updatePayload.history.length > originalHistoryLength) {
+                // Find the new event that doesn't exist in the original history
+                const newEvent = updatePayload.history.find(h => !(originalProspect.history || []).some(oh => oh.id === h.id));
+                if (newEvent && !newEvent.created_by_user_id) {
+                    newEvent.created_by_user_id = profile.id;
+                    newEvent.created_by_user_name = `${profile.first_name} ${profile.last_name}`;
+                }
+            }
+        }
+
+
         // If the assigned user is changing, find the new name and add it to the payload.
         if (updatePayload.assigned_to && users) {
             const assignedUser = users.find(u => u.id === updatePayload.assigned_to);
             if (assignedUser) {
                 updatePayload.assigned_to_name = `${assignedUser.first_name} ${assignedUser.last_name}`;
             }
-        }
-
-        const originalProspect = prospects.find(p => p.id === prospectId);
-        if (!originalProspect) {
-            throw new Error(`[updateProspect] Prospect with ID ${prospectId} not found.`);
         }
 
         // If loan_amount is being updated on an active prospect, sync the principal_balance.
@@ -233,7 +250,7 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
             setProspects(prev => prev.map(p => p.id === prospectId ? data : p));
             console.log(`%c[LOG 10 - ProspectsContext]`, 'color: #007bff; font-weight: bold;', 'Final state sync complete.');
         }
-    }, [prospects, users]);
+    }, [prospects, users, profile]);
 
     const addProspect = useCallback(async (prospectData: Omit<Prospect, 'id' | 'created_at' | 'status' | 'current_stage' | 'current_stage_name' | 'assigned_to_name' | 'stages' | 'rejected_at_stage'>) => {
         const assignedUser = users.find(u => u.id === prospectData.assigned_to);
@@ -403,6 +420,7 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
         if (!loan) return;
 
         const newPrincipalBalance = (loan.terms?.principal_balance || 0) - payment.amount;
+        
         const newHistoryEvent: HistoryEvent = {
             id: `hist-${crypto.randomUUID()}`,
             date_created: new Date().toISOString().split('T')[0],
@@ -412,12 +430,15 @@ export const ProspectsProvider: React.FC<{ children: ReactNode }> = ({ children 
             notes: payment.notes,
             distributions: payment.distributions,
         };
+        
         const updatedFunders = (loan.funders || []).map(funder => {
             const distribution = payment.distributions.find(d => d.funderId === funder.id);
             const funderReduction = distribution ? distribution.amount : 0;
             return { ...funder, principal_balance: funder.principal_balance - funderReduction };
         });
+
         const totalPrincipal = updatedFunders.reduce((sum, f) => sum + f.principal_balance, 0);
+        
         const finalFunders = totalPrincipal > 0
             ? updatedFunders.map(f => ({ ...f, pct_owned: f.principal_balance / totalPrincipal }))
             : updatedFunders.map(f => ({ ...f, pct_owned: 0 }));

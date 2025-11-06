@@ -9,7 +9,7 @@ interface HistorySectionProps {
 }
 
 const HistorySection: React.FC<HistorySectionProps> = ({ loan, onDeleteEvent }) => {
-    const history = loan.history || [];
+    const history = (loan.history || []).sort((a,b) => new Date(b.date_received).getTime() - new Date(a.date_received).getTime());
 
     const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
@@ -24,7 +24,8 @@ const HistorySection: React.FC<HistorySectionProps> = ({ loan, onDeleteEvent }) 
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Created</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Received</th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -34,7 +35,10 @@ const HistorySection: React.FC<HistorySectionProps> = ({ loan, onDeleteEvent }) 
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(event.date_created)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(event.date_received)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{event.type}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatCurrency(event.total_amount)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{event.created_by_user_name || 'System'}</td>
+                                    <td className={`px-4 py-4 whitespace-nowrap text-sm text-right ${event.type === 'Payment' ? 'text-green-600' : 'text-gray-800'}`}>
+                                        {formatCurrency(event.total_amount)}
+                                    </td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                                         <button
                                             onClick={() => {

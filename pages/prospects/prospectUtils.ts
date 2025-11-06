@@ -1,4 +1,4 @@
-import { Prospect, UserProfile, Stage } from './types';
+import { Prospect, UserProfile, Stage, Funder, HistoryEvent } from './types';
 
 const STAGE_NAMES = ["Pre-validation", "KYC", "Title Work", "Underwriting (UW)", "Appraisal", "Closing"];
 
@@ -110,6 +110,7 @@ export const generateNewProspect = (
         current_stage_name: 'Pre-validation',
         assigned_to_name: `${assignedUser.first_name} ${assignedUser.last_name}`,
         stages: initialStages,
+        history: [],
         terms: {
             original_amount: initialLoanAmount,
             principal_balance: initialLoanAmount

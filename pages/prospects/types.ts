@@ -90,10 +90,12 @@ export interface HistoryEvent {
     id: string;
     date_created: string; // YYYY-MM-DD
     date_received: string; // YYYY-MM-DD
-    type: string;
+    type: 'Funding' | 'Payment' | 'Fee' | 'Adjustment';
     total_amount: number;
     notes?: string;
     distributions?: { funderId: string; amount: number }[];
+    created_by_user_id?: string;
+    created_by_user_name?: string;
 }
 
 export interface PropertyPhoto {
@@ -140,13 +142,22 @@ export interface CoBorrower {
     relation_type?: string;
 }
 
+export type TrustAccountEventType = 
+    | 'Deposit' 
+    | 'Withdrawal' 
+    | 'Funding Disbursement' 
+    | 'Payment Receipt' 
+    | 'Funding Reversal' 
+    | 'Payment Reversal';
+
 export interface TrustAccountEvent {
     id: string;
     event_date: string; // YYYY-MM-DD
-    event_type: 'deposit' | 'withdrawal';
+    event_type: TrustAccountEventType;
     description: string;
     amount: number;
-    // FIX: Add optional balance property to align with its use in calculating running balances.
+    related_loan_id?: string;
+    related_loan_code?: string;
     balance?: number;
 }
 

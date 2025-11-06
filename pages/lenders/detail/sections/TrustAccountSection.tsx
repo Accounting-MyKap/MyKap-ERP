@@ -21,7 +21,7 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender }) => 
 
     const handleSaveDeposit = async (eventData: Omit<TrustAccountEvent, 'id' | 'event_type'>) => {
         try {
-            await addFundsToLenderTrust(lender.id, eventData.amount, eventData.description);
+            await addFundsToLenderTrust(lender.id, { ...eventData, event_type: 'Deposit' });
             showToast('Deposit recorded successfully!', 'success');
             setIsDepositModalOpen(false);
         } catch (error: any) {
@@ -31,7 +31,7 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender }) => 
     
     const handleSaveWithdrawal = async (eventData: Omit<TrustAccountEvent, 'id' | 'event_type'>) => {
         try {
-            await withdrawFromLenderTrust(lender.id, eventData);
+            await withdrawFromLenderTrust(lender.id, { ...eventData, event_type: 'Withdrawal' });
             showToast('Withdrawal recorded successfully!', 'success');
             setIsWithdrawModalOpen(false);
         } catch (error: any) {
@@ -40,6 +40,9 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender }) => 
     };
     
     const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+    const isWithdrawalType = (type: string) => 
+        ['Withdrawal', 'Funding Disbursement', 'Payment Reversal'].includes(type);
 
     return (
         <div className="space-y-6">
@@ -69,10 +72,15 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender }) => 
                             {history.map(event => (
                                 <tr key={event.id}>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(event.event_date)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm capitalize text-gray-600">{event.event_type}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{event.description}</td>
-                                    <td className={`px-4 py-4 whitespace-nowrap text-sm text-right ${event.event_type !== 'deposit' ? 'text-red-600' : 'text-green-600'}`}>
-                                        {event.event_type === 'deposit' ? '+' : '-'}{formatCurrency(event.amount)}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{event.event_type}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {event.description}
+                                        {event.related_loan_code && (
+                                            <span className="block text-xs font-mono text-gray-500">{event.related_loan_code}</span>
+                                        )}
+                                    </td>
+                                    <td className={`px-4 py-4 whitespace-nowrap text-sm text-right ${isWithdrawalType(event.event_type) ? 'text-red-600' : 'text-green-600'}`}>
+                                        {isWithdrawalType(event.event_type) ? '-' : '+'}{formatCurrency(event.amount)}
                                     </td>
                                 </tr>
                             ))}

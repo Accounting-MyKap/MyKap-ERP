@@ -8,8 +8,8 @@ interface LendersContextType {
     error: string | null;
     addLender: (lenderData: Omit<Lender, 'id' | 'portfolio_value' | 'trust_balance' | 'updated_at' | 'trust_account_events'>) => Promise<void>;
     updateLender: (lenderId: string, updatedData: Partial<Omit<Lender, 'trust_account_events'>>) => Promise<void>;
-    addFundsToLenderTrust: (lenderId: string, amount: number, description: string) => Promise<void>;
-    withdrawFromLenderTrust: (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'event_type'>) => Promise<void>;
+    addFundsToLenderTrust: (lenderId: string, eventData: Omit<TrustAccountEvent, 'id'>) => Promise<void>;
+    withdrawFromLenderTrust: (lenderId: string, eventData: Omit<TrustAccountEvent, 'id'>) => Promise<void>;
 }
 
 export const LendersContext = createContext<LendersContextType | undefined>(undefined);
@@ -109,11 +109,12 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
     // Generic function to handle a new trust transaction via RPC
     const addTrustTransaction = async (
         lenderId: string,
-        type: 'deposit' | 'withdrawal',
-        eventData: { event_date: string; description: string; amount: number }
+        eventData: Omit<TrustAccountEvent, 'id'>
     ) => {
         const originalLender = lenders.find(l => l.id === lenderId);
         if (!originalLender) throw new Error("Lender not found.");
+
+        const isWithdrawal = ['Withdrawal', 'Funding Disbursement', 'Payment Reversal'].includes(eventData.event_type);
 
         if (eventData.amount <= 0 || !Number.isFinite(eventData.amount)) {
             throw new Error("Transaction amount must be a positive number.");
@@ -121,16 +122,15 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (!eventData.description || eventData.description.trim() === '') {
             throw new Error("A description is required for the transaction.");
         }
-        if (type === 'withdrawal' && originalLender.trust_balance < eventData.amount) {
+        if (isWithdrawal && originalLender.trust_balance < eventData.amount) {
             throw new Error("Insufficient funds for withdrawal.");
         }
 
         // Optimistic Update
-        const amountChange = type === 'deposit' ? eventData.amount : -eventData.amount;
+        const amountChange = isWithdrawal ? -eventData.amount : eventData.amount;
         const newEvent: TrustAccountEvent = {
             id: `temp-${crypto.randomUUID()}`,
             ...eventData,
-            event_type: type,
         };
         const optimisticallyUpdatedLender = {
             ...originalLender,
@@ -142,17 +142,19 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
         // Call RPC
         const { error } = await supabase.rpc('add_trust_transaction', {
             p_lender_id: lenderId,
-            p_event_type: type,
+            p_event_type: eventData.event_type,
             p_event_date: eventData.event_date,
             p_description: eventData.description,
-            p_amount: eventData.amount
+            p_amount: eventData.amount,
+            p_related_loan_id: eventData.related_loan_id,
+            p_related_loan_code: eventData.related_loan_code,
         });
 
         if (error) {
-            console.error(`Error during ${type}:`, error);
+            console.error(`Error during ${eventData.event_type}:`, error);
             // Revert on failure
             setLenders(prev => prev.map(l => l.id === lenderId ? originalLender : l));
-            throw new Error(`Failed to record ${type}.`);
+            throw new Error(`Failed to record ${eventData.event_type}.`);
         }
 
         // Fetch fresh data to re-sync state after successful RPC
@@ -172,16 +174,12 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
 
-    const addFundsToLenderTrust = async (lenderId: string, amount: number, description: string): Promise<void> => {
-        await addTrustTransaction(lenderId, 'deposit', {
-            event_date: new Date().toISOString().split('T')[0],
-            description,
-            amount
-        });
+    const addFundsToLenderTrust = async (lenderId: string, eventData: Omit<TrustAccountEvent, 'id'>): Promise<void> => {
+        await addTrustTransaction(lenderId, eventData);
     };
 
-    const withdrawFromLenderTrust = async (lenderId: string, eventData: Omit<TrustAccountEvent, 'id' | 'event_type'>): Promise<void> => {
-        await addTrustTransaction(lenderId, 'withdrawal', eventData);
+    const withdrawFromLenderTrust = async (lenderId: string, eventData: Omit<TrustAccountEvent, 'id'>): Promise<void> => {
+        await addTrustTransaction(lenderId, eventData);
     };
 
     const value = { lenders, loading, error, addLender, updateLender, addFundsToLenderTrust, withdrawFromLenderTrust };
