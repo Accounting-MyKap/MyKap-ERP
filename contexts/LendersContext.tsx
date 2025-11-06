@@ -140,14 +140,15 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
         setLenders(prev => prev.map(l => l.id === lenderId ? optimisticallyUpdatedLender : l));
 
         // Call RPC
+        // FIX: Explicitly pass null for optional parameters to resolve function ambiguity.
         const { error } = await supabase.rpc('add_trust_transaction', {
             p_lender_id: lenderId,
             p_event_type: eventData.event_type,
             p_event_date: eventData.event_date,
             p_description: eventData.description,
             p_amount: eventData.amount,
-            p_related_loan_id: eventData.related_loan_id,
-            p_related_loan_code: eventData.related_loan_code,
+            p_related_loan_id: eventData.related_loan_id || null,
+            p_related_loan_code: eventData.related_loan_code || null,
         });
 
         if (error) {
