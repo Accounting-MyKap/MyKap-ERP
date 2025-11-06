@@ -154,7 +154,13 @@ export const LendersProvider: React.FC<{ children: ReactNode }> = ({ children })
             console.error(`Error during ${eventData.event_type}:`, error);
             // Revert on failure
             setLenders(prev => prev.map(l => l.id === lenderId ? originalLender : l));
-            throw new Error(`Failed to record ${eventData.event_type}.`);
+            
+            // Construct a more detailed error message for the user
+            let detailedError = `Database error: ${error.message}.`;
+            if (error.details) detailedError += ` Details: ${error.details}.`;
+            if (error.hint) detailedError += ` Hint: ${error.hint}.`;
+            
+            throw new Error(`Failed to record ${eventData.event_type}. ${detailedError}`);
         }
 
         // Fetch fresh data to re-sync state after successful RPC
