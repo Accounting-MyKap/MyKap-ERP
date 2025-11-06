@@ -23,9 +23,9 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender }) => 
         try {
             await addFundsToLenderTrust(lender.id, { ...eventData, event_type: 'Deposit' });
             showToast('Deposit recorded successfully!', 'success');
-            setIsDepositModalOpen(false);
         } catch (error: any) {
             showToast(`Error: ${error.message}`, 'error');
+            throw error; // Re-throw to keep the modal open
         }
     };
     
@@ -33,9 +33,9 @@ const TrustAccountSection: React.FC<TrustAccountSectionProps> = ({ lender }) => 
         try {
             await withdrawFromLenderTrust(lender.id, { ...eventData, event_type: 'Withdrawal' });
             showToast('Withdrawal recorded successfully!', 'success');
-            setIsWithdrawModalOpen(false);
         } catch (error: any) {
             showToast(`Error: ${error.message}`, 'error');
+            throw error; // Re-throw to keep the modal open
         }
     };
     
